@@ -1,16 +1,20 @@
+//add styling, full screen vs. small screen,
+//drag and drop?, specific view for table?, check permissions
+
 import {
     initializeBlock,
     useBase,
     useRecords,
     useGlobalConfig,
+    settingsButton,
+    useSettingsButton,
     TablePickerSynced,
     Input,
     Label,
     FormField,
     FieldPickerSynced,
     Button,
-    settingsButton,
-    useSettingsButton,
+    Select,
 } from '@airtable/blocks/ui';
 import React, {useState, useEffect} from 'react';
 
@@ -18,14 +22,21 @@ function SeatingChartBlock() {
 
     const [isShowingSettings, setIsShowingSettings] = useState(false);
 
+    useSettingsButton(function() {
+        setIsShowingSettings(!isShowingSettings);
+    });
+
     var newChartDisabled = false;
     var existingChartDisabled = false;
 
     const [showNewChart, setShowNewChart] = useState(false);
     const [loadExistingChart, setLoadExistingChart] = useState(false);
 
+    // show settings
     if (isShowingSettings) {
         return <SettingsComponent />;
+
+    // show block options screen
     } else if (!showNewChart && !loadExistingChart) {
         return <div>
             <Button disabled={newChartDisabled} onClick={() => setShowNewChart(true)} icon="cog">
@@ -35,17 +46,17 @@ function SeatingChartBlock() {
             <Button disabled={existingChartDisabled} onClick={() => setLoadExistingChart(true)} icon="download">
                 Load an Existing Seating Chart
             </Button>
-
-            <Button
-                onClick={() => setIsShowingSettings(true)}
-                icon="settings"
-                aria-label="Settings">Settings
-            </Button>
         </div>;
+
+    // show new seating chart screen
     } else if (showNewChart && !loadExistingChart) {
         return <NewSeatingChart />;
+
+    // show load existing seating chart screen
     } else if (loadExistingChart && !showNewChart) {
         return <LoadExistingSeatingChart />;
+
+    // error page -- show settings?
     } else {
         return <div>ERROR, try refreshing the page.</div>;
     }
@@ -54,6 +65,7 @@ function SeatingChartBlock() {
 // settings component
 function SettingsComponent() {
     //not need settings until want to click load existing or until try to save old?
+    //dialog for help text?
 
     const base = useBase();
 
@@ -91,7 +103,7 @@ function SettingsComponent() {
     </div>;
 }
 
-// new seating chart set-up function
+// new seating chart component
 
 function NewSeatingChart() {
     const base = useBase();
@@ -110,7 +122,6 @@ function NewSeatingChart() {
     const buttonDisabled = numTables <= 0 || numTables == null || numChairs <= 0 ||  numChairs == null || guestTable == null || relationshipField == null;
 
     // note if number of guests exceeds capacity given
-
     var errorMessage = "";
 
     var guestTableLength = useRecords(guestTable).length;
@@ -139,13 +150,17 @@ function NewSeatingChart() {
             Generate Seating Chart
         </Button>
 
-        //render seating chart when button is pressed
+        //call automatic assignment function
 
-        //ask if store data
+        // add loading icon
+
+        //render seating chart
+
+        //ask if store data, add loader icon while storing, success message for storing
     </div>;
 }
 
-// pull existing seating chart
+// load existing seating chart component
 
 function LoadExistingSeatingChart() {
     const base = useBase();
@@ -153,32 +168,56 @@ function LoadExistingSeatingChart() {
     const globalConfig = useGlobalConfig();
 
     const dataTableId = globalConfig.get('dataTableId');
-
     const dataTable = base.getTableByIdIfExists(dataTableId);
 
-    const records = useRecords(dataTable);
+    const guestNameFieldId = globalConfig.get('guestNameFieldId');
+    const chartNameFieldId = globalConfig.get('chartNameFieldId');
+    const tableNumFieldId = globalConfig.get('tableNumFieldId');
+    const chairNumFieldId = globalConfig.get('chairNumFieldId');
 
-    //filter records by correct chart, then sort by table number and chair number
-    //and pass to render function with number of tables and chairs
+    const chartNameField = dataTable.getFieldByIdIfExists(chartNameFieldId);
 
-    //use settings for correct fields (update settings if errors)
+    const sortOptions = {
+        sorts: [
+            {field: chartNameFieldId, direction: 'asc'},
+            {field: tableNumFieldId, direction: 'asc'},
+            {field: chairNumFieldId, direction: 'asc'},
+        ],
+        fields: [
+            guestNameFieldId,
+            chartNameFieldId,
+            tableNumFieldId,
+            chairNumFieldId,
+            // unique record
+            // chart name unique id?
+        ]
+    };
 
-    //have picker for seating chart name to use
+    const records = useRecords(dataTable, sortOptions);
+    // truncate records by seating chart name before passing, get numTables and numChairs as well
+    // renderSeatingChart(records, numTables, numChairs);
 
-    const guests = records.map(record => {
-        return (
-            <div key={record.id}>
-                {record.name || 'Unnamed guest'}
-            </div>
-        );
-    });
+    const chart = <div>Chart</div>;
 
-    //render seating chart
+    // have picker for seating chart name to use -- need to use text field instead?
+    // how to handle unique id, etc.
+    const chartOptions = [
+        {value: "1", label: "Chart 1"},
+        {value: "2", label: "Chart 2"},
+        {value: "3", label: "Chart 3"}
+    ];
+
+    const [chartId, setChartId] = useState(chartOptions[0].value);
 
     return <div>
-        <Label htmlFor="data-table-picker">Select table that contains existing seating chart data</Label>
-        <TablePickerSynced id="data-table-picker" globalConfigKey="dataTableId" />
-        {guests}
+        <Select
+            options={chartOptions}
+            value={chartId}
+            onChange={newChartId => setChartId(newChartId)}
+        />
+
+        //chart here
+
     </div>;
 }
 
@@ -188,8 +227,6 @@ function seatingAutomation(records, numTables, numChairs) {
     console.log("Automated seating chart");
 
     // if no relationships, seat at random table with other people with no relationships
-
-    // add loading icon
 
     // sort records by table number and then by seat
 
@@ -216,15 +253,15 @@ function renderSeatingChart(records, numTables, numChairs) {
         chart += "</ol>";
 
     }
-    // sort by table and then
+
+    return chart;
 }
 
 // Save seating chart data to file
 
 function saveSeatingChartData(records, chartName) {
 
+    //handle chart name vs. unique ID
 }
-
-//drag and drop?, specific view for table?, check permissions
 
 initializeBlock(() => <SeatingChartBlock />);
