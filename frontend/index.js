@@ -16,6 +16,7 @@ import {
     Button,
     Select,
 } from '@airtable/blocks/ui';
+import { FieldType } from '@airtable/blocks/models'
 import React, {useState, useEffect} from 'react';
 
 function SeatingChartBlock() {
@@ -95,10 +96,10 @@ function SettingsComponent() {
         <FieldPickerSynced id="guest-name-field-picker" table={dataTable} globalConfigKey="guestNameFieldId" />
 
         <Label htmlFor="table-num-field-picker">Select field that contains the table number</Label>
-        <FieldPickerSynced id="table-num-field-picker" table={dataTable} globalConfigKey="tableNumFieldId" />
+        <FieldPickerSynced id="table-num-field-picker" table={dataTable} allowedTypes={[FieldType.NUMBER]} globalConfigKey="tableNumFieldId" />
 
         <Label htmlFor="chair-num-field-picker">Select field that contains the chair number</Label>
-        <FieldPickerSynced id="chair-num-field-picker" table={dataTable} globalConfigKey="chairNumFieldId" />
+        <FieldPickerSynced id="chair-num-field-picker" shouldAllowPickingNone={true} allowedTypes={[FieldType.NUMBER]} table={dataTable} globalConfigKey="chairNumFieldId" />
 
     </div>;
 }
@@ -106,6 +107,13 @@ function SettingsComponent() {
 // new seating chart component
 
 function NewSeatingChart() {
+
+    const [isShowingSettings, setIsShowingSettings] = useState(false);
+
+    useSettingsButton(function() {
+        setIsShowingSettings(!isShowingSettings);
+    })
+    
     const base = useBase();
     const globalConfig = useGlobalConfig();
 
@@ -157,27 +165,40 @@ function NewSeatingChart() {
         //render seating chart
 
         //ask if store data, add loader icon while storing, success message for storing
+        <Button onClick={() => saveSeatingChartData(records)} icon="upload">
+            Store Data
+        </Button>
     </div>;
 }
 
 // load existing seating chart component
 
 function LoadExistingSeatingChart() {
+
+    const [isShowingSettings, setIsShowingSettings] = useState(false);
+
+    useSettingsButton(function() {
+        setIsShowingSettings(!isShowingSettings);
+    })
+
     const base = useBase();
 
     const globalConfig = useGlobalConfig();
 
     const dataTableId = globalConfig.get('dataTableId');
-    const dataTable = base.getTableByIdIfExists(dataTableId);
-
     const guestNameFieldId = globalConfig.get('guestNameFieldId');
     const chartNameFieldId = globalConfig.get('chartNameFieldId');
     const tableNumFieldId = globalConfig.get('tableNumFieldId');
     const chairNumFieldId = globalConfig.get('chairNumFieldId');
 
+    const dataTable = base.getTableByIdIfExists(dataTableId);
     const chartNameField = dataTable.getFieldByIdIfExists(chartNameFieldId);
 
-    const sortOptions = {
+    console.log(chartNameField);
+
+    //check if the table and fields actually exist -> error if not?
+
+/*    const sortOptions = {
         sorts: [
             {field: chartNameFieldId, direction: 'asc'},
             {field: tableNumFieldId, direction: 'asc'},
@@ -191,9 +212,9 @@ function LoadExistingSeatingChart() {
             // unique record
             // chart name unique id?
         ]
-    };
+    };*/
 
-    const records = useRecords(dataTable, sortOptions);
+//    const records = useRecords(dataTable, sortOptions);
     // truncate records by seating chart name before passing, get numTables and numChairs as well
     // renderSeatingChart(records, numTables, numChairs);
 
@@ -209,16 +230,20 @@ function LoadExistingSeatingChart() {
 
     const [chartId, setChartId] = useState(chartOptions[0].value);
 
-    return <div>
-        <Select
-            options={chartOptions}
-            value={chartId}
-            onChange={newChartId => setChartId(newChartId)}
-        />
+    if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
+        return <div>
+            Before proceeding with loading saved data you must fill out some information.
+            <SettingsComponent />
 
-        //chart here
+            </div>;
+    } else {
+        return <div>
+            "Testing"
+            //chart here
 
-    </div>;
+        </div>;
+    }
+
 }
 
 // Create seating chart automatic backend function
@@ -259,9 +284,27 @@ function renderSeatingChart(records, numTables, numChairs) {
 
 // Save seating chart data to file
 
-function saveSeatingChartData(records, chartName) {
-
+function saveSeatingChartData(records) {
     //handle chart name vs. unique ID
+    const base = useBase();
+    const globalConfig = useGlobalConfig();
+
+    const dataTableId = globalConfig.get('dataTableId');
+    const guestNameFieldId = globalConfig.get('guestNameFieldId');
+    const chartNameFieldId = globalConfig.get('chartNameFieldId');
+    const tableNumFieldId = globalConfig.get('tableNumFieldId');
+    const chairNumFieldId = globalConfig.get('chairNumFieldId');
+
+    const dataTable = base.getTableByIdIfExists(dataTableId);
+    const chartNameField = dataTable.getFieldByIdIfExists(chartNameFieldId);
+
+    const [chartName, setChartName] = useState("");
+
+    <FormField label="Seating Chart Name">
+        <Input value={chartName} required={true} onChange={e => setChartName(e.target.value)} />
+    </FormField>
+
+    //handle settings
 }
 
 initializeBlock(() => <SeatingChartBlock />);
