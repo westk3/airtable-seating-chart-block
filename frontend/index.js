@@ -1,5 +1,7 @@
 //add styling, full screen vs. small screen,
 //drag and drop?, specific view for table?, check permissions
+//remove allow pick none
+//add tooltips for disabled buttons
 
 import {
     initializeBlock,
@@ -21,14 +23,13 @@ import React, {useState, useEffect} from 'react';
 
 function SeatingChartBlock() {
 
+    //explanation text?
+
     const [isShowingSettings, setIsShowingSettings] = useState(false);
 
     useSettingsButton(function() {
         setIsShowingSettings(!isShowingSettings);
     });
-
-    var newChartDisabled = false;
-    var existingChartDisabled = false;
 
     const [showNewChart, setShowNewChart] = useState(false);
     const [loadExistingChart, setLoadExistingChart] = useState(false);
@@ -40,11 +41,11 @@ function SeatingChartBlock() {
     // show block options screen
     } else if (!showNewChart && !loadExistingChart) {
         return <div>
-            <Button disabled={newChartDisabled} onClick={() => setShowNewChart(true)} icon="cog">
+            <Button onClick={() => setShowNewChart(true)} icon="cog">
                 Create a New Seating Chart
             </Button>
 
-            <Button disabled={existingChartDisabled} onClick={() => setLoadExistingChart(true)} icon="download">
+            <Button onClick={() => setLoadExistingChart(true)} icon="download">
                 Load an Existing Seating Chart
             </Button>
         </div>;
@@ -65,8 +66,6 @@ function SeatingChartBlock() {
 
 // settings component
 function SettingsComponent() {
-    //not need settings until want to click load existing or until try to save old?
-    //dialog for help text?
 
     const base = useBase();
 
@@ -87,7 +86,7 @@ function SettingsComponent() {
 
         //get unique identifier field for each record?
 
-        //need seating chart unique identifier??
+        // check is text field
         <Label htmlFor="chart-name-field-picker">Select field that contains the seating chart name</Label>
         <FieldPickerSynced id="chart-name-field-picker" table={dataTable} globalConfigKey="chartNameFieldId" />
 
@@ -113,7 +112,7 @@ function NewSeatingChart() {
     useSettingsButton(function() {
         setIsShowingSettings(!isShowingSettings);
     })
-    
+
     const base = useBase();
     const globalConfig = useGlobalConfig();
 
@@ -132,10 +131,18 @@ function NewSeatingChart() {
     // note if number of guests exceeds capacity given
     var errorMessage = "";
 
-    var guestTableLength = useRecords(guestTable).length;
+    var records = useRecords(guestTable);
 
-    if (!buttonDisabled && numTables != null && numChairs != null && guestTableLength > numTables * numChairs) {
+    if (!buttonDisabled && numTables != null && numChairs != null && records.length > numTables * numChairs) {
         errorMessage = "You do not have enough capacity to seat all your guests. If you click Generate Seating Chart, a chart will generate using the first " + numTables * numChairs + " people on your list.";
+    }
+
+    const [generateChart, setGenerateChart] = useState(false);
+
+    var chart;
+
+    if (generateChart) {
+        chart = seatingAutomation(records, numTables, numChairs);
     }
 
     return <div>
@@ -154,20 +161,17 @@ function NewSeatingChart() {
 
         {errorMessage}
 
-        <Button onClick={() => seatingAutomation()} disabled={buttonDisabled} icon="personalAuto">
+        <Button onClick={e => setGenerateChart(true)} disabled={buttonDisabled} icon="personalAuto">
             Generate Seating Chart
         </Button>
 
-        //call automatic assignment function
-
-        // add loading icon
-
         //render seating chart
+        {generateChart && chart}
 
         //ask if store data, add loader icon while storing, success message for storing
-        <Button onClick={() => saveSeatingChartData(records)} icon="upload">
+        {generateChart && <Button onClick={() => saveSeatingChartData(records)} icon="upload">
             Store Data
-        </Button>
+        </Button>}
     </div>;
 }
 
@@ -194,11 +198,7 @@ function LoadExistingSeatingChart() {
     const dataTable = base.getTableByIdIfExists(dataTableId);
     const chartNameField = dataTable.getFieldByIdIfExists(chartNameFieldId);
 
-    console.log(chartNameField);
-
-    //check if the table and fields actually exist -> error if not?
-
-/*    const sortOptions = {
+    const sortOptions = {
         sorts: [
             {field: chartNameFieldId, direction: 'asc'},
             {field: tableNumFieldId, direction: 'asc'},
@@ -209,26 +209,35 @@ function LoadExistingSeatingChart() {
             chartNameFieldId,
             tableNumFieldId,
             chairNumFieldId,
-            // unique record
-            // chart name unique id?
         ]
-    };*/
+    };
 
-//    const records = useRecords(dataTable, sortOptions);
+    const records = useRecords(dataTable, sortOptions);
+
     // truncate records by seating chart name before passing, get numTables and numChairs as well
-    // renderSeatingChart(records, numTables, numChairs);
+    // test use records with things that don't exist
 
-    const chart = <div>Chart</div>;
+    var numTables = 5;
+    var numChairs = 3;
 
-    // have picker for seating chart name to use -- need to use text field instead?
-    // how to handle unique id, etc.
-    const chartOptions = [
-        {value: "1", label: "Chart 1"},
-        {value: "2", label: "Chart 2"},
-        {value: "3", label: "Chart 3"}
-    ];
+    const [chartName, setChartName] = useState("");
 
-    const [chartId, setChartId] = useState(chartOptions[0].value);
+    var buttonDisabled = true;
+
+    if (chartName == "" || chartName == null) {
+
+    } else {
+        buttonDisabled = false;
+    }
+
+    const [renderChart, setRenderChart] = useState(false);
+
+    var chart;
+
+    if (renderChart) {
+        chart = renderSeatingChart(records,  numTables, numChairs);
+    }
+
 
     if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
         return <div>
@@ -238,8 +247,14 @@ function LoadExistingSeatingChart() {
             </div>;
     } else {
         return <div>
-            "Testing"
-            //chart here
+            <FormField label="Seating Chart Name">
+                <Input value={chartName} required={true} onChange={e => setChartName(e.target.value)} />
+            </FormField>
+
+            <Button onClick={e => setRenderChart(true)} disabled={buttonDisabled} icon="download">
+                Load Chart
+            </Button>
+            {renderChart && chart}
 
         </div>;
     }
@@ -265,27 +280,36 @@ function seatingAutomation(records, numTables, numChairs) {
 
 function renderSeatingChart(records, numTables, numChairs) {
 
-    var chart = "";
+    if (records.length == numTables * numChairs) {
+        var chart = "";
 
-    for (var i = 0; i < numTables; i++) {
+        for (var i = 0; i < numTables; i++) {
 
-        chart += "<h2>Table " + i + 1 + "</h2><ol>";
+            chart += "<h2>Table " + i + 1 + "</h2><ol>";
 
-        for (var j = 0; j < numChairs; j++) {
-            chart += "<li>" + record[i * j].name + "</li>";
+            for (var j = 0; j < numChairs; j++) {
+                chart += "<li>" + records[i * j].name + "</li>";
+            }
+
+            chart += "</ol>";
+
         }
 
-        chart += "</ol>";
-
+        return chart;
+    } else {
+        return "Sorry, the chart can't be generated at this time.";
     }
-
-    return chart;
 }
 
 // Save seating chart data to file
 
 function saveSeatingChartData(records) {
-    //handle chart name vs. unique ID
+    const [isShowingSettings, setIsShowingSettings] = useState(false);
+
+    useSettingsButton(function() {
+        setIsShowingSettings(!isShowingSettings);
+    })
+
     const base = useBase();
     const globalConfig = useGlobalConfig();
 
@@ -300,11 +324,34 @@ function saveSeatingChartData(records) {
 
     const [chartName, setChartName] = useState("");
 
-    <FormField label="Seating Chart Name">
-        <Input value={chartName} required={true} onChange={e => setChartName(e.target.value)} />
-    </FormField>
+    //warn if name trying to save to is the same as current name (will mess up file?)
 
-    //handle settings
+    var buttonDisabled = true;
+
+    if (chartName == "" || charName == null) {
+
+    } else {
+        buttonDisabled = false;
+    }
+
+    if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
+        return <div>
+            Before proceeding with saving data you must fill out some information.
+            <SettingsComponent />
+
+            </div>;
+    } else {
+        return <div>
+            <FormField label="New Seating Chart Name">
+                <Input value={chartName} required={true} onChange={e => setChartName(e.target.value)} />
+            </FormField>
+
+            <Button onClick={e => setRenderChart(true)} disabled={buttonDisabled} icon="upload">
+                Save Records
+            </Button>
+
+        </div>;
+    }
 }
 
 initializeBlock(() => <SeatingChartBlock />);
