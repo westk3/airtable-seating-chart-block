@@ -10,6 +10,7 @@ import {
     useGlobalConfig,
     settingsButton,
     useSettingsButton,
+    Tooltip,
     TablePickerSynced,
     Input,
     Label,
@@ -84,11 +85,9 @@ function SettingsComponent() {
         <Label htmlFor="data-table-picker">Select table to store seating chart data</Label>
         <TablePickerSynced id="data-table-picker" globalConfigKey="dataTableId" />
 
-        //get unique identifier field for each record?
-
         // check is text field
         <Label htmlFor="chart-name-field-picker">Select field that contains the seating chart name</Label>
-        <FieldPickerSynced id="chart-name-field-picker" table={dataTable} globalConfigKey="chartNameFieldId" />
+        <FieldPickerSynced id="chart-name-field-picker" table={dataTable} allowedTypes={FieldType.TEXT} globalConfigKey="chartNameFieldId" />
 
         //check unique and that is lookup?
         <Label htmlFor="guest-name-field-picker">Select field that contains the guest lookup field</Label>
@@ -212,13 +211,8 @@ function LoadExistingSeatingChart() {
         ]
     };
 
+// test use records with things that don't exist
     const records = useRecords(dataTable, sortOptions);
-
-    // truncate records by seating chart name before passing, get numTables and numChairs as well
-    // test use records with things that don't exist
-
-    var numTables = 5;
-    var numChairs = 3;
 
     const [chartName, setChartName] = useState("");
 
@@ -233,9 +227,40 @@ function LoadExistingSeatingChart() {
     const [renderChart, setRenderChart] = useState(false);
 
     var chart;
+    var errorMessage = "";
 
     if (renderChart) {
-        chart = renderSeatingChart(records,  numTables, numChairs);
+        var maxTableNum = 0;
+        var maxChairNum = 0;
+
+        var guestNameArray = [];
+        var tableNumArray = [];
+        var chairNumArray = [];
+        var filteredArray = [];
+
+        for (var i = 0; i < records.length; i++) {
+
+            if (records[i].getCellValue(chartNameFieldId) == chartName) {
+
+                filteredArray.push(records[i]);
+
+                if (records[i].getCellValue(tableNumFieldId) > maxTableNum) {
+                    maxTableNum = records[i].getCellValue(tableNumFieldId);
+                }
+
+                if (records[i].getCellValue(chairNumFieldId) > maxChairNum) {
+                    maxChairNum = records[i].getCellValue(chairNumFieldId);
+                }
+            }
+        }
+
+        if (filteredArray.length == 0 || maxChairNum == 0 || maxTableNum == 0) {
+            errorMessage = "That chart could not be found. Please try a different name.";
+        } else {
+
+            chart = renderSeatingChart(filteredArray,  maxTableNum, maxChairNum, guestNameFieldId, chairNumFieldId, tableNumFieldId);
+        }
+
     }
 
 
@@ -254,7 +279,10 @@ function LoadExistingSeatingChart() {
             <Button onClick={e => setRenderChart(true)} disabled={buttonDisabled} icon="download">
                 Load Chart
             </Button>
-            {renderChart && chart}
+
+            {renderChart && errorMessage}
+
+            {renderChart && <div>{chart}</div>}
 
         </div>;
     }
@@ -278,24 +306,39 @@ function seatingAutomation(records, numTables, numChairs) {
 
 // Render the seating chart
 
-function renderSeatingChart(records, numTables, numChairs) {
+function renderSeatingChart(records, numTables, numChairs, guestNameFieldId, chairNumFieldId, tableNumFieldId) {
 
-    if (records.length == numTables * numChairs) {
-        var chart = "";
+    //test seating chart for breaking
+    if (records.length <= numTables * numChairs) {
+        var numberArray = [];
+        var filteredRecords = [];
 
         for (var i = 0; i < numTables; i++) {
-
-            chart += "<h2>Table " + i + 1 + "</h2><ol>";
-
-            for (var j = 0; j < numChairs; j++) {
-                chart += "<li>" + records[i * j].name + "</li>";
-            }
-
-            chart += "</ol>";
-
+            numberArray.push(i + 1);
         }
+        console.log(numberArray);
 
-        return chart;
+        var formattedRecords =
+
+            numberArray.map((value, index) => {
+
+                return <div key="index"><h2>Table {value}</h2><ol>
+
+                records.map((value2, index2) => {
+
+                    (value2.getCellValue(tableNumFieldId) == {value2}) ?
+                    <li key={index2}> value2.getCellValueAsString(guestNameFieldId)</li> : <li></li>
+
+                })
+
+                </ol></div>;
+        })
+
+        console.log(formattedRecords);
+
+        return <div>
+            {formattedRecords}
+        </div>;
     } else {
         return "Sorry, the chart can't be generated at this time.";
     }
@@ -328,7 +371,7 @@ function saveSeatingChartData(records) {
 
     var buttonDisabled = true;
 
-    if (chartName == "" || charName == null) {
+    if (chartName == "" || chartName == null) {
 
     } else {
         buttonDisabled = false;
