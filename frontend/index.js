@@ -1,7 +1,20 @@
 //add styling, full screen vs. small screen,
-//drag and drop?, specific view for table?, check permissions
+//add view options for tables
+//check permissions
 //remove allow pick none
-//add tooltips for disabled buttons
+//add error messages for disabled buttons
+//add comments
+//test render chart with bad values
+//error on home page screen
+//test errors for load seating chart
+//test errors for new seating chart
+//seating chart automation
+//saving seating chart data to file
+//forward, back, and home buttons
+//figure out how to exit loops early (try to optimize other algorithms)
+//add loading icons?
+//add info and dialog boxes
+//restrict necessary fields from useRecords
 
 import {
     initializeBlock,
@@ -117,15 +130,15 @@ function NewSeatingChart() {
 
     const guestTableId = globalConfig.get('guestTableId');
     const relationshipFieldId = globalConfig.get('relationshipFieldId');
+    const originalGuestNameFieldId = globalConfig.get('originalGuestNameFieldId');
 
     const guestTable = base.getTableByIdIfExists(guestTableId);
-    const relationshipField = guestTable ? guestTable.getFieldByIdIfExists(relationshipFieldId) : null;
 
     const [numTables, setTableValue] = useState("");
     const [numChairs, setChairValue] = useState("");
 
     // disable Generate Seating Chart button until fields are filled
-    const buttonDisabled = numTables <= 0 || numTables == null || numChairs <= 0 ||  numChairs == null || guestTable == null || relationshipField == null;
+    const buttonDisabled = numTables <= 0 || numTables == null || numChairs <= 0 ||  numChairs == null || guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null;
 
     // note if number of guests exceeds capacity given
     var errorMessage = "";
@@ -139,39 +152,50 @@ function NewSeatingChart() {
     const [generateChart, setGenerateChart] = useState(false);
 
     var chart;
+    var finalRecords;
 
     if (generateChart) {
-        chart = seatingAutomation(records, numTables, numChairs);
+        finalRecords = seatingAutomation(records, numTables, numChairs, relationshipFieldId, originalGuestNameFieldId);
+        chart = renderSeatingChart(finalRecords, numTables, numChairs);
     }
 
-    return <div>
-        <Label htmlFor="guest-table-picker">Select table that contains guest data</Label>
-        <TablePickerSynced id="guest-table-picker" globalConfigKey="guestTableId" />
-        <Label htmlFor="relationship-field-picker">Select field that contains relationship data for each guest</Label>
-        <FieldPickerSynced id="relationship-field-picker" table={guestTable} globalConfigKey="relationshipFieldId" />
+    const [saveChartData, setSaveChartData] = useState(false);
 
-        <FormField label="Number of Tables">
-            <Input value={numTables} type="number" min="1" required={true} onChange={e => setTableValue(e.target.value)} />
-        </FormField>
+    if (saveChartData) {
+        return <SaveSeatingChartData record={finalRecords} />;
+    } else {
 
-        <FormField label="Number of Chairs">
-            <Input value={numChairs} required={true} min="1" type="number" onChange={e => setChairValue(e.target.value)} />
-        </FormField>
+        return <div>
+            <Label htmlFor="guest-table-picker">Select table that contains guest data</Label>
+            <TablePickerSynced id="guest-table-picker" globalConfigKey="guestTableId" />
+            <Label htmlFor="original-guest-name-field-picker">Select field that contains the name for each guest</Label>
+            <FieldPickerSynced id="original-guest-name-field-picker" table={guestTable} globalConfigKey="originalGuestNameFieldId" />
+            <Label htmlFor="relationship-field-picker">Select field that contains relationship data for each guest</Label>
+            <FieldPickerSynced id="relationship-field-picker" table={guestTable} globalConfigKey="relationshipFieldId" />
 
-        {errorMessage}
+            <FormField label="Number of Tables">
+                <Input value={numTables} type="number" min="1" required={true} onChange={e => setTableValue(e.target.value)} />
+            </FormField>
 
-        <Button onClick={e => setGenerateChart(true)} disabled={buttonDisabled} icon="personalAuto">
-            Generate Seating Chart
-        </Button>
+            <FormField label="Number of Chairs">
+                <Input value={numChairs} required={true} min="1" type="number" onChange={e => setChairValue(e.target.value)} />
+            </FormField>
 
-        //render seating chart
-        {generateChart && chart}
+            {errorMessage}
 
-        //ask if store data, add loader icon while storing, success message for storing
-        {generateChart && <Button onClick={() => saveSeatingChartData(records)} icon="upload">
-            Store Data
-        </Button>}
-    </div>;
+            <Button onClick={e => setGenerateChart(true)} disabled={buttonDisabled} icon="personalAuto">
+                Generate Seating Chart
+            </Button>
+
+            //render seating chart
+            {generateChart && chart}
+
+            //ask if store data, add loader icon while storing, success message for storing
+            {generateChart && <Button onClick={() => setSaveChartData(true)} icon="upload">
+                Store Data
+            </Button>}
+        </div>;
+    }
 }
 
 // load existing seating chart component
@@ -234,8 +258,6 @@ function LoadExistingSeatingChart() {
         var maxChairNum = 0;
 
         var guestNameArray = [];
-        var tableNumArray = [];
-        var chairNumArray = [];
         var filteredArray = [];
 
         for (var i = 0; i < records.length; i++) {
@@ -254,11 +276,26 @@ function LoadExistingSeatingChart() {
             }
         }
 
+        var name = "";
+
+        for (var j = 0; j < maxTableNum * maxChairNum; j++) {
+            console.log(maxTableNum * maxChairNum);
+            for (var k = 0; k < filteredArray.length; k++) {
+                console.log("Table: " + (Math.floor(j / maxChairNum) + 1) + " Chair: " + ((j % maxChairNum) + 1));
+                if (filteredArray[k].getCellValue(tableNumFieldId) == (Math.floor(j / maxChairNum) + 1) && filteredArray[k].getCellValue(chairNumFieldId) == ((j % maxChairNum) + 1)) {
+                    name = filteredArray[k].getCellValueAsString(guestNameFieldId);
+                }
+            }
+
+            guestNameArray.push(name);
+            name = "";
+        }
+
         if (filteredArray.length == 0 || maxChairNum == 0 || maxTableNum == 0) {
             errorMessage = "That chart could not be found. Please try a different name.";
         } else {
 
-            chart = renderSeatingChart(filteredArray,  maxTableNum, maxChairNum, guestNameFieldId, chairNumFieldId, tableNumFieldId);
+            chart = renderSeatingChart(guestNameArray, maxTableNum, maxChairNum);
         }
 
     }
@@ -291,50 +328,60 @@ function LoadExistingSeatingChart() {
 
 // Create seating chart automatic backend function
 
-function seatingAutomation(records, numTables, numChairs) {
-    console.log("Automated seating chart");
+function seatingAutomation(records, numTables, numChairs, relationshipFieldId, originalGuestNameFieldId) {
+
+    var finalRecords = [];
+
+    for (var i = 0; i < numTables * numChairs; i++) {
+        if (records[i] != null) {
+            finalRecords.push(records[i].getCellValueAsString(originalGuestNameFieldId));
+        } else {
+            finalRecords.push("");
+        }
+    }
 
     // if no relationships, seat at random table with other people with no relationships
 
     // sort records by table number and then by seat
 
-    // call seating chart map creation with number of tables and chairs
-    const chart = renderSeatingChart(records, numTables, numChairs);
-
-    return <div>{chart}</div>;
+    return finalRecords;
 }
 
 // Render the seating chart
 
-function renderSeatingChart(records, numTables, numChairs, guestNameFieldId, chairNumFieldId, tableNumFieldId) {
+function renderSeatingChart(guestNameArray, numTables, numChairs) {
 
-    //test seating chart for breaking
-    if (records.length <= numTables * numChairs) {
-        var numberArray = [];
-        var filteredRecords = [];
+    if (guestNameArray.length == numTables * numChairs) {
+        var tableArray = [];
 
         for (var i = 0; i < numTables; i++) {
-            numberArray.push(i + 1);
+            tableArray.push(i);
         }
-        console.log(numberArray);
+
+        var chairArray = [];
+
+        for (var j = 0; j < numChairs; j++) {
+            chairArray.push(j);
+        }
+
+        var test = 0;
 
         var formattedRecords =
 
-            numberArray.map((value, index) => {
+            tableArray.map((tableValue, tableIndex) => {
 
-                return <div key="index"><h2>Table {value}</h2><ol>
+                return <div key={tableIndex}><h2>Table {tableValue + 1}</h2><ol>
 
-                records.map((value2, index2) => {
+                {chairArray.map((chairValue, chairIndex) => {
+                    test = (tableValue * numChairs) + chairValue;
 
-                    (value2.getCellValue(tableNumFieldId) == {value2}) ?
-                    <li key={index2}> value2.getCellValueAsString(guestNameFieldId)</li> : <li></li>
+                    return <li key={chairIndex}>{guestNameArray[test]}
 
-                })
+                    </li>
+                })}
 
                 </ol></div>;
         })
-
-        console.log(formattedRecords);
 
         return <div>
             {formattedRecords}
@@ -346,8 +393,10 @@ function renderSeatingChart(records, numTables, numChairs, guestNameFieldId, cha
 
 // Save seating chart data to file
 
-function saveSeatingChartData(records) {
+function SaveSeatingChartData(props) {
     const [isShowingSettings, setIsShowingSettings] = useState(false);
+
+    var records = props.records;
 
     useSettingsButton(function() {
         setIsShowingSettings(!isShowingSettings);
@@ -367,8 +416,6 @@ function saveSeatingChartData(records) {
 
     const [chartName, setChartName] = useState("");
 
-    //warn if name trying to save to is the same as current name (will mess up file?)
-
     var buttonDisabled = true;
 
     if (chartName == "" || chartName == null) {
@@ -377,21 +424,61 @@ function saveSeatingChartData(records) {
         buttonDisabled = false;
     }
 
+    const [saveData, setSaveData] = useState(false);
+
+    const seatingChartRecords = useRecords(dataTable, {fields: [chartNameFieldId]});
+
+    var chartNameWillBeOverwritten = false;
+
+    if (saveData) {
+        for (var i = 0; i < seatingChartRecords.length; i++) {
+            if (seatingChartRecords[i].getCellValueAsString(chartNameFieldId) == chartName) {
+                chartNameWillBeOverwritten = true;
+            } else {
+
+            }
+        }
+    }
+
+    if (saveData && !chartNameWillBeOverwritten) {
+        //save the data;
+        const batchSize = 50;
+
+        var recordsToUpdate = [];
+
+        if (recordsToUpdate.length < 50) {
+            dataTable.createRecordsAsync(recordsToUpdate);
+        } else {
+            var i = 0;
+            while (i < recordsToUpdate.length) {
+                const updateBatch = recordsToUpdate.slice(i, i + batchSize);
+
+                await dataTable.createRecordsAsync(recordsToUpdate);
+
+                i += batchSize;
+            }
+        }
+    }
+
     if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
         return <div>
             Before proceeding with saving data you must fill out some information.
             <SettingsComponent />
 
             </div>;
+    } else if (saveData && !chartNameWillBeOverwritten) {
+        return <div>Saving Records</div>;
     } else {
         return <div>
             <FormField label="New Seating Chart Name">
                 <Input value={chartName} required={true} onChange={e => setChartName(e.target.value)} />
             </FormField>
 
-            <Button onClick={e => setRenderChart(true)} disabled={buttonDisabled} icon="upload">
+            <Button onClick={e => setSaveData(true)} disabled={buttonDisabled} icon="upload">
                 Save Records
             </Button>
+
+            {chartNameWillBeOverwritten && "That chart name is already in use. Please choose another name."}
 
         </div>;
     }
