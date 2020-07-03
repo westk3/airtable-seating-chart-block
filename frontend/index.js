@@ -1,20 +1,27 @@
 //add styling, full screen vs. small screen,
-//add view options for tables
-//check permissions
-//remove allow pick none
-//add error messages for disabled buttons
-//add comments
-//test render chart with bad values
+//add info and dialog boxes
 //error on home page screen
+//add error messages for disabled buttons
+
+//check permissions - commenter and read-only can generate chart (but not save?), add option?
 //test errors for load seating chart
 //test errors for new seating chart
+//test render chart with bad values
+//check save with 50+ records
+
+//remove allow pick none
+//add comments
+
 //seating chart automation
-//saving seating chart data to file
+//get save to return to finish screen (and hide Chart Name problem) - set save data false when chart name problem (check others)
 //forward, back, and home buttons
-//figure out how to exit loops early (try to optimize other algorithms)
+//editing seating chart after the fact?
+
+//optimize loops/algorithms
 //add loading icons?
-//add info and dialog boxes
-//restrict necessary fields from useRecords
+//add view options for tables
+//non-linked guest name option?
+
 
 import {
     initializeBlock,
@@ -23,6 +30,7 @@ import {
     useGlobalConfig,
     settingsButton,
     useSettingsButton,
+    Loader,
     Tooltip,
     TablePickerSynced,
     Input,
@@ -36,8 +44,6 @@ import { FieldType } from '@airtable/blocks/models'
 import React, {useState, useEffect} from 'react';
 
 function SeatingChartBlock() {
-
-    //explanation text?
 
     const [isShowingSettings, setIsShowingSettings] = useState(false);
 
@@ -72,7 +78,7 @@ function SeatingChartBlock() {
     } else if (loadExistingChart && !showNewChart) {
         return <LoadExistingSeatingChart />;
 
-    // error page -- show settings?
+    // error page
     } else {
         return <div>ERROR, try refreshing the page.</div>;
     }
@@ -143,7 +149,7 @@ function NewSeatingChart() {
     // note if number of guests exceeds capacity given
     var errorMessage = "";
 
-    var records = useRecords(guestTable);
+    var records = useRecords(guestTable, {fields: [relationshipFieldId, originalGuestNameFieldId]});
 
     if (!buttonDisabled && numTables != null && numChairs != null && records.length > numTables * numChairs) {
         errorMessage = "You do not have enough capacity to seat all your guests. If you click Generate Seating Chart, a chart will generate using the first " + numTables * numChairs + " people on your list.";
@@ -153,16 +159,26 @@ function NewSeatingChart() {
 
     var chart;
     var finalRecords;
+    var nameOnlyFinalRecords = [];
 
     if (generateChart) {
         finalRecords = seatingAutomation(records, numTables, numChairs, relationshipFieldId, originalGuestNameFieldId);
-        chart = renderSeatingChart(finalRecords, numTables, numChairs);
+
+        for (var k = 0; k < finalRecords.length; k++) {
+            if (finalRecords[k] != "") {
+                nameOnlyFinalRecords.push(finalRecords[k].getCellValueAsString(originalGuestNameFieldId));
+            } else {
+                nameOnlyFinalRecords.push("");
+            }
+        }
+
+        chart = renderSeatingChart(nameOnlyFinalRecords, numTables, numChairs);
     }
 
     const [saveChartData, setSaveChartData] = useState(false);
 
     if (saveChartData) {
-        return <SaveSeatingChartData record={finalRecords} />;
+        return <SaveSeatingChartData records={finalRecords} numChairs={numChairs} numTables={numTables} />;
     } else {
 
         return <div>
@@ -236,7 +252,7 @@ function LoadExistingSeatingChart() {
     };
 
 // test use records with things that don't exist
-    const records = useRecords(dataTable, sortOptions);
+    const records = useRecords(dataTable, sortOptions, {fields: [chartNameFieldId, tableNumFieldId, chairNumFieldId, guestNameFieldId]});
 
     const [chartName, setChartName] = useState("");
 
@@ -279,11 +295,12 @@ function LoadExistingSeatingChart() {
         var name = "";
 
         for (var j = 0; j < maxTableNum * maxChairNum; j++) {
-            console.log(maxTableNum * maxChairNum);
+
             for (var k = 0; k < filteredArray.length; k++) {
-                console.log("Table: " + (Math.floor(j / maxChairNum) + 1) + " Chair: " + ((j % maxChairNum) + 1));
+
                 if (filteredArray[k].getCellValue(tableNumFieldId) == (Math.floor(j / maxChairNum) + 1) && filteredArray[k].getCellValue(chairNumFieldId) == ((j % maxChairNum) + 1)) {
                     name = filteredArray[k].getCellValueAsString(guestNameFieldId);
+                    break;
                 }
             }
 
@@ -332,9 +349,11 @@ function seatingAutomation(records, numTables, numChairs, relationshipFieldId, o
 
     var finalRecords = [];
 
+    records[i].selectLinkedRecordsFromCell(relationshipFieldId).fields.length;
+
     for (var i = 0; i < numTables * numChairs; i++) {
         if (records[i] != null) {
-            finalRecords.push(records[i].getCellValueAsString(originalGuestNameFieldId));
+            finalRecords.push(records[i]);
         } else {
             finalRecords.push("");
         }
@@ -373,9 +392,8 @@ function renderSeatingChart(guestNameArray, numTables, numChairs) {
                 return <div key={tableIndex}><h2>Table {tableValue + 1}</h2><ol>
 
                 {chairArray.map((chairValue, chairIndex) => {
-                    test = (tableValue * numChairs) + chairValue;
 
-                    return <li key={chairIndex}>{guestNameArray[test]}
+                    return <li key={chairIndex}>{guestNameArray[(tableValue * numChairs) + chairValue]}
 
                     </li>
                 })}
@@ -397,6 +415,8 @@ function SaveSeatingChartData(props) {
     const [isShowingSettings, setIsShowingSettings] = useState(false);
 
     var records = props.records;
+    var numChairs = props.numChairs;
+    var numTables = props.numTables;
 
     useSettingsButton(function() {
         setIsShowingSettings(!isShowingSettings);
@@ -430,34 +450,39 @@ function SaveSeatingChartData(props) {
 
     var chartNameWillBeOverwritten = false;
 
-    if (saveData) {
+    var saveCompleted = false;
+
+    if (saveData && !saveCompleted) {
         for (var i = 0; i < seatingChartRecords.length; i++) {
             if (seatingChartRecords[i].getCellValueAsString(chartNameFieldId) == chartName) {
                 chartNameWillBeOverwritten = true;
+                break;
             } else {
 
             }
         }
     }
 
-    if (saveData && !chartNameWillBeOverwritten) {
-        //save the data;
-        const batchSize = 50;
+    var savingInProgress = true;
 
+    if (saveData && !chartNameWillBeOverwritten) {
         var recordsToUpdate = [];
 
-        if (recordsToUpdate.length < 50) {
-            dataTable.createRecordsAsync(recordsToUpdate);
-        } else {
-            var i = 0;
-            while (i < recordsToUpdate.length) {
-                const updateBatch = recordsToUpdate.slice(i, i + batchSize);
+        for (var j = 0; j < records.length; j++) {
+            if (records[j] != "") {
+                recordsToUpdate.push({fields: {
+                    [chartNameFieldId]: chartName,
+                    [tableNumFieldId]: Math.floor(j / numChairs) + 1,
+                    [chairNumFieldId]: (j % numChairs) + 1,
+                    [guestNameFieldId]: [{id: records[j].id}]
+                }});
+            } else {
 
-                await dataTable.createRecordsAsync(recordsToUpdate);
-
-                i += batchSize;
             }
         }
+
+        saveCompleted = true;
+        //savingInProgress = createChartRecords(dataTable, recordsToUpdate);
     }
 
     if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
@@ -466,8 +491,10 @@ function SaveSeatingChartData(props) {
             <SettingsComponent />
 
             </div>;
-    } else if (saveData && !chartNameWillBeOverwritten) {
-        return <div>Saving Records</div>;
+    } else if (saveData && !chartNameWillBeOverwritten && savingInProgress) {
+        return <div><Loader scale={0.3} /></div>;
+    } else if (saveData && !chartNameWillBeOverwritten && !savingInProgress) {
+        return <div>Save Completed</div>;
     } else {
         return <div>
             <FormField label="New Seating Chart Name">
@@ -482,6 +509,26 @@ function SaveSeatingChartData(props) {
 
         </div>;
     }
+}
+
+async function createChartRecords(dataTable, recordsToUpdate) {
+    //save the data;
+    const batchSize = 50;
+
+    if (recordsToUpdate.length < 50) {
+        dataTable.createRecordsAsync(recordsToUpdate);
+    } else {
+        var i = 0;
+        while (i < recordsToUpdate.length) {
+            const updateBatch = recordsToUpdate.slice(i, i + batchSize);
+
+            await dataTable.createRecordsAsync(recordsToUpdate);
+
+            i += batchSize;
+        }
+    }
+
+    return false;
 }
 
 initializeBlock(() => <SeatingChartBlock />);
