@@ -9,23 +9,16 @@
 //test errors for new seating chart
 //test render chart with bad values
 //check save with 50+ records (check can't get to save if commenter/readonly) - need to check permission separately?
-//when change table problems happen
+//when change table problems happen (clear globalconfig?)
+//test seating automation with more people (add loading icon)
+//check parseInt
+//try loading table with 50+ records (Add loading icons?)
 
-//remove allow pick none
 //add comments
 
-//seating chart automation - put into array, shuffle and check for relationships (overall happiness?)
-//get save to return to finish screen (and hide Chart Name problem) - set save data false when chart name problem (check others)
+//save data check chart name problem (and creation)
 //editing seating chart after the fact?
-
-//optimize loops/algorithms (check variable declaration in loops)
-//add loading icons?
-//non-linked guest name option?
-//remember current unsaved generated chart?
-//restrict to at least 2 guests
-
-//primary, secondary button variants?
-
+//regenerate chart button?
 
 import {
     initializeBlock,
@@ -36,6 +29,8 @@ import {
     useSettingsButton,
     useLoadable,
     useWatchable,
+    Box,
+    ConfirmationDialog,
     SwitchSynced,
     Loader,
     Tooltip,
@@ -51,6 +46,7 @@ import {
 import { FieldType } from '@airtable/blocks/models'
 import React, {useState, useEffect} from 'react';
 
+// Seating Chart block initial screen
 function SeatingChartBlock() {
 
     const [isShowingSettings, setIsShowingSettings] = useState(false);
@@ -66,17 +62,31 @@ function SeatingChartBlock() {
     if (isShowingSettings) {
         return <SettingsComponent />;
 
-    // show block options screen
+    // show choices to create a new seating chart or load an existing seating chart
     } else if (!showNewChart && !loadExistingChart) {
-        return <div>
-            <Button onClick={() => setShowNewChart(true)} icon="cog">
-                Create a New Seating Chart
-            </Button>
+        return <Box
+                    position="absolute"
+                    top={0}
+                    left={0}
+                    right={0}
+                    bottom={0}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                >
+                    <Box position="relative" flex="auto" padding={1} margin={3}>
+                        <Button onClick={() => setShowNewChart(true)} icon="cog">
+                            Create a New Seating Chart
+                            </Button>
+                    </Box>
 
-            <Button onClick={() => setLoadExistingChart(true)} icon="download">
-                Load an Existing Seating Chart
-            </Button>
-        </div>;
+                    <Box position="relative" flex="auto" padding={1} margin={3}>
+                        <Button onClick={() => setLoadExistingChart(true)} icon="download">
+                            Load an Existing Seating Chart
+                        </Button>
+                    </Box>
+            </Box>;
 
     // show new seating chart screen
     } else if (showNewChart && !loadExistingChart) {
@@ -99,6 +109,9 @@ function SettingsComponent() {
 
     const globalConfig = useGlobalConfig();
 
+    const commenterGenerateChart = globalConfig.get('commenterGenerateChart');
+    const readOnlyGenerateChart = globalConfig.get('readOnlyGenerateChart');
+
     const dataTableId = globalConfig.get('dataTableId');
     const dataTable = base.getTableByIdIfExists(dataTableId);
 
@@ -107,34 +120,67 @@ function SettingsComponent() {
     const tableNumFieldId = globalConfig.get('tableNumFieldId');
     const chairNumFieldId = globalConfig.get('chairNumFieldId');
 
-    const commenterGenerateChart = globalConfig.get('commenterGenerateChart');
-    const readOnlyGenerateChart = globalConfig.get('readOnlyGenerateChart');
+    const guestTableId = globalConfig.get('guestTableId');
+    const guestTable = base.getTableByIdIfExists(guestTableId);
 
-    return <div>
-        <Label htmlFor="commenter-generate-chart">Do you want commenters to be able to generate charts? They won't be able to save them.</Label>
-        <SwitchSynced id="commenter-generate-chart" globalConfigKey="commenterGenerateChart" />
+    const relationshipFieldId = globalConfig.get('relationshipFieldId');
+    const originalGuestNameFieldId = globalConfig.get('originalGuestNameFieldId');
 
-        <Label htmlFor="read-only-generate-chart">Do you want read-only users to be able to generate charts? They won't be able to save them.</Label>
-        <SwitchSynced id="read-only-generate-chart" globalConfigKey="readOnlyGenerateChart" />
+    return <Box
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                display="flex"
+                alignItems="left"
+                justifyContent="flex-start"
+                flexDirection="column"
+                padding={2}
+            >
 
+            <h2>Permissions settings</h2>
+            <Label htmlFor="commenter-generate-chart">Do you want commenters to be able to generate charts? They won't be able to save them.</Label>
+            <SwitchSynced id="commenter-generate-chart" globalConfigKey="commenterGenerateChart" />
+
+            <Label htmlFor="read-only-generate-chart">Do you want read-only users to be able to generate charts? They won't be able to save them.</Label>
+            <SwitchSynced id="read-only-generate-chart" globalConfigKey="readOnlyGenerateChart" />
+
+            <h2>Settings to create a new seating chart</h2>
+            <Label htmlFor="guest-table-picker">Select table that contains guest data</Label>
+            <TablePickerSynced id="guest-table-picker" globalConfigKey="guestTableId" />
+
+            <Label htmlFor="original-guest-name-field-picker">Select field that contains the name for each guest</Label>
+            <FieldPickerSynced id="original-guest-name-field-picker" table={guestTable} globalConfigKey="originalGuestNameFieldId" />
+
+            <Label htmlFor="relationship-field-picker">Select field that contains relationship data for each guest</Label>
+            <FieldPickerSynced id="relationship-field-picker" table={guestTable} globalConfigKey="relationshipFieldId" />
+
+        <h2>Settings to save or load a new seating chart</h2>
+
+        // table to store the seating chart data
         <Label htmlFor="data-table-picker">Select table to store seating chart data</Label>
         <TablePickerSynced id="data-table-picker" globalConfigKey="dataTableId" />
 
         // check is text field
+        // field to store the seating chart name
         <Label htmlFor="chart-name-field-picker">Select field that contains the seating chart name</Label>
         <FieldPickerSynced id="chart-name-field-picker" table={dataTable} allowedTypes={FieldType.TEXT} globalConfigKey="chartNameFieldId" />
 
         //check unique and that is lookup?
+        // field to store the lookup to the guest table
         <Label htmlFor="guest-name-field-picker">Select field that contains the guest lookup field</Label>
         <FieldPickerSynced id="guest-name-field-picker" table={dataTable} globalConfigKey="guestNameFieldId" />
 
+        // field that stores the table number
         <Label htmlFor="table-num-field-picker">Select field that contains the table number</Label>
         <FieldPickerSynced id="table-num-field-picker" table={dataTable} allowedTypes={[FieldType.NUMBER]} globalConfigKey="tableNumFieldId" />
 
+        // field that stores the chair number
         <Label htmlFor="chair-num-field-picker">Select field that contains the chair number</Label>
-        <FieldPickerSynced id="chair-num-field-picker" shouldAllowPickingNone={true} allowedTypes={[FieldType.NUMBER]} table={dataTable} globalConfigKey="chairNumFieldId" />
+        <FieldPickerSynced id="chair-num-field-picker" allowedTypes={[FieldType.NUMBER]} table={dataTable} globalConfigKey="chairNumFieldId" />
 
-    </div>;
+    </Box>;
 }
 
 // new seating chart component
@@ -159,6 +205,10 @@ function NewSeatingChart() {
 
     const guestTable = base.getTableByIdIfExists(guestTableId);
 
+    if (guestTableId == null || relationshipFieldId == null || originalGuestNameFieldId == null) {
+        return <SettingsComponent />;
+    }
+
     const numTables = globalConfig.get('numTables');
     const numChairs = globalConfig.get('numChairs');
 
@@ -170,7 +220,7 @@ function NewSeatingChart() {
 
     var records = useRecords(guestTable, {fields: [relationshipFieldId, originalGuestNameFieldId]});
 
-    if (records.length <= 1) {
+    if (records.length < 2) {
         errorMessage = "You must have at least two people on your list to create a seating chart.";
     } else if (!buttonDisabled && numTables != null && numChairs != null && records.length > numTables * numChairs) {
         errorMessage = "You do not have enough capacity to seat all your guests. If you click Generate Seating Chart, a chart will generate using the first " + numTables * numChairs + " people on your list."
@@ -178,53 +228,80 @@ function NewSeatingChart() {
 
     const [generateChart, setGenerateChart] = useState(false);
 
-    var chart;
     var finalRecords;
     var nameOnlyFinalRecords = [];
+    var idOnlyFinalRecords = [];
 
-    const linkedRecordQueries = records.map(
-        record => record.selectLinkedRecordsFromCell(relationshipFieldId),
-    );
+    var chart;
+    const [chartGenerated, setChartGenerated] = useState(false);
 
-    useLoadable(linkedRecordQueries);
-    useWatchable(linkedRecordQueries, ['records', 'cellValues']);
+    if (generateChart && !chartGenerated) {
 
-    if (generateChart) {
-
-        finalRecords = seatingAutomation(records, linkedRecordQueries, numTables, numChairs, relationshipFieldId);
+        finalRecords = seatingAutomation(records, numTables, numChairs, relationshipFieldId);
 
         for (var k = 0; k < finalRecords.length; k++) {
             if (finalRecords[k] != "") {
                 nameOnlyFinalRecords.push(finalRecords[k].getCellValueAsString(originalGuestNameFieldId));
+                idOnlyFinalRecords.push(finalRecords[k].id);
             } else {
                 nameOnlyFinalRecords.push("");
+                idOnlyFinalRecords.push("");
             }
         }
 
-        chart = renderSeatingChart(nameOnlyFinalRecords, numTables, numChairs);
-
+        setChartGenerated(true);
+        setGenerateChart(false);
+        globalConfig.setAsync("renderRecords", nameOnlyFinalRecords);
+        globalConfig.setAsync("saveRecords", idOnlyFinalRecords);
     }
 
+    if (chartGenerated) {
+        nameOnlyFinalRecords = globalConfig.get("renderRecords");
+        idOnlyFinalRecords = globalConfig.get("saveRecords");
+    }
+
+    chart = renderSeatingChart(nameOnlyFinalRecords, numTables, numChairs);
+
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [saveChartData, setSaveChartData] = useState(false);
     const [showHomeScreen, setHomeScreen] = useState(false);
 
     if (showHomeScreen) {
         return <SeatingChartBlock />;
+    } else if (guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null) {
+        return <SettingsComponent />;
     } else if (saveChartData) {
-        return <SaveSeatingChartData records={finalRecords} numChairs={numChairs} numTables={numTables} chart={chart} />;
+        return <SaveSeatingChartData records={idOnlyFinalRecords} numChairs={numChairs} numTables={numTables} chart={chart} />;
     } else {
 
-        return <div>
-            <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
+        return <Box
+                    position="absolute"
+                    top={0}
+                    left={0}
+                    right={0}
+                    bottom={0}
+                    display="flex"
+                    alignItems="left"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                    maxWidth="300px"
+                    margin-left="auto"
+                    margin-right="auto"
+                >
+            {!chartGenerated && <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
+            {chartGenerated && <Button onClick={(e) => {setIsDialogOpen(true)} } icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
+            {isDialogOpen && <ConfirmationDialog
+                title="Are you sure you want to leave without saving?"
+                body="If you leave without saving, you won't be able to access this chart again."
+                confirmButtonText="Continue without saving"
+                onConfirm={() => {
+                    setIsDialogOpen(false);
+                    setHomeScreen(true);
+                }}
+                onCancel={() => setIsDialogOpen(false)}
+            />}
 
-            <Label htmlFor="guest-table-picker">Select table that contains guest data</Label>
-            <TablePickerSynced id="guest-table-picker" globalConfigKey="guestTableId" />
 
-            <Label htmlFor="original-guest-name-field-picker">Select field that contains the name for each guest</Label>
-            <FieldPickerSynced id="original-guest-name-field-picker" table={guestTable} globalConfigKey="originalGuestNameFieldId" />
-
-            <Label htmlFor="relationship-field-picker">Select field that contains relationship data for each guest</Label>
-            <FieldPickerSynced id="relationship-field-picker" table={guestTable} globalConfigKey="relationshipFieldId" />
 
             <FormField label="Number of Tables">
                 <InputSynced type="number" min="1" required={true} globalConfigKey="numTables" />
@@ -236,16 +313,16 @@ function NewSeatingChart() {
 
             {errorMessage}
 
-            {!generateChart && <Button onClick={e => setGenerateChart(true)} disabled={buttonDisabled} icon="personalAuto" variant="primary">
+            {!chartGenerated && <Button onClick={e => setGenerateChart(true)} disabled={buttonDisabled} icon="personalAuto" variant="primary">
                 Generate Seating Chart
             </Button>}
 
-            {generateChart && chart}
+            {chartGenerated && chart}
 
-            {generateChart && <Button onClick={() => setSaveChartData(true)} variant="primary" icon="upload">
+            {chartGenerated && <Button onClick={() => setSaveChartData(true)} variant="primary" icon="upload">
                 Store Data
             </Button>}
-        </div>;
+        </Box>;
     }
 }
 
@@ -270,6 +347,12 @@ function LoadExistingSeatingChart() {
     const chairNumFieldId = globalConfig.get('chairNumFieldId');
 
     const dataTable = base.getTableByIdIfExists(dataTableId);
+
+    if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
+        return <div>Before proceeding with loading saved data you must fill out some information.
+        <SettingsComponent /></div>;
+    }
+
     const chartNameField = dataTable.getFieldByIdIfExists(chartNameFieldId);
 
     const sortOptions = {
@@ -362,7 +445,17 @@ function LoadExistingSeatingChart() {
 
             </div>;
     } else {
-        return <div>
+        return <Box
+                    position="absolute"
+                    top={0}
+                    left={0}
+                    right={0}
+                    bottom={0}
+                    display="flex"
+                    alignItems="left"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                >
             <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
 
             <FormField label="Seating Chart Name">
@@ -377,14 +470,14 @@ function LoadExistingSeatingChart() {
 
             {renderChart && <div>{chart}</div>}
 
-        </div>;
+        </Box>;
     }
 
 }
 
 // Seating chart automatic creation function
 
-function seatingAutomation(records, linkedRecordQueries, numTables, numChairs, relationshipFieldId) {
+function seatingAutomation(records, numTables, numChairs, relationshipFieldId) {
 
     var maxTimes = 50;
     var currentTimes = 0;
@@ -400,20 +493,20 @@ function seatingAutomation(records, linkedRecordQueries, numTables, numChairs, r
     }
 
     var currentRecords = finalRecords;
-    var currentScore = seatingAutomationHelper(currentRecords, linkedRecordQueries, numTables, numChairs, relationshipFieldId);
+    var currentScore = seatingAutomationHelper(currentRecords, numTables, numChairs, relationshipFieldId);
 
-    var bestScore = 0;
+    var bestScore = currentScore;
     var bestRecords = finalRecords;
 
     var newRecords;
     var newScore = 0;
 
-    /*while (bestScore < (numTables * numChairs * 2 * 0.75) && currentTimes < maxTimes) {
+    while (bestScore < (numTables * numChairs * 2 * 0.75) && currentTimes < maxTimes) {
 
         //rearrange
-        newRecords = rearrangeRecords(currentRecords, linkedRecordQueries, numTables, numChairs);
+        newRecords = rearrangeRecords(currentRecords, numTables, numChairs);
 
-        newScore = seatingAutomationHelper(newRecords, linkedRecordQueries, numTables, numChairs, relationshipFieldId);
+        newScore = seatingAutomationHelper(newRecords, numTables, numChairs, relationshipFieldId);
 
         if (currentScore < newScore) {
             currentScore = newScore;
@@ -432,12 +525,12 @@ function seatingAutomation(records, linkedRecordQueries, numTables, numChairs, r
         }
 
         currentTimes += 1;
-    }*/
+    }
 
     return bestRecords;
 }
 
-function rearrangeRecords(records, linkedRecordQueries, numTables, numChairs) {
+function rearrangeRecords(records, numTables, numChairs) {
 
     var index1 = Math.floor(Math.random() * Math.floor(records.length));
     var index2 = Math.floor(Math.random() * Math.floor(records.length));
@@ -445,75 +538,77 @@ function rearrangeRecords(records, linkedRecordQueries, numTables, numChairs) {
     var recordAtIndex1 = records[index1];
     var recordAtIndex2 = records[index2];
 
-    var linkedRecord1 = linkedRecordQueries[index1];
-    var linkedRecord2 = records[index2];
-
     records[index1] = recordAtIndex2;
     records[index2] = recordAtIndex1;
-
-    linkedRecordQueries[index1] = linkedRecord2;
-    linkedRecordQueries[index2] = linkedRecord1;
 
     return records;
 }
 
-function seatingAutomationHelper(records, linkedRecordQueries, numTables, numChairs, relationshipFieldId) {
+function seatingAutomationHelper(records, numTables, numChairs, relationshipFieldId) {
     var score = 0;
 
     for (var j = 0; j < numTables * numChairs; j++) {
-        score += countHappiness(records.slice(j, parseInt(j + numChairs)), linkedRecordQueries);
-        console.log("slice: " + j + " : " + j + numChairs);
+        score += countHappiness(records.slice(j, j + parseInt(numChairs)), relationshipFieldId);
+
         j = j + parseInt(numChairs) - 1;
-        console.log(j);
+
     }
 
     return score;
 }
 
-function countHappiness(tableRecords, linkedRecordQueries) {
+function countHappiness(tableRecords, relationshipFieldId) {
     var happiness = 0;
     var linkedRecordsCount = 0;
+
+    var linkedRecords;
 
     var tableRecordIds = [];
 
     for (var k = 0; k < tableRecords.length; k++) {
-        if (tableRecords[k].id != null && tableRecords[k].id != "") {
+        if (tableRecords[k] != null && tableRecords[k] != "") {
             tableRecordIds.push(tableRecords[k].id);
         }
     }
 
-    console.log(tableRecordIds);
-
     if (tableRecords.length == 1) {
-        return 0;
+
     } else {
+
         for (var i = 0; i < tableRecords.length; i++) {
-            console.log("here");
+            linkedRecordsCount = 0;
 
-            if (tableRecords[i] == null || tableRecords[i] == "" || linkedRecordQueries[i] == null || linkedRecordQueries[i].length == 0) {
+            if (tableRecords[i] == null || tableRecords[i] == "") {
                 happiness += 2;
-            } else {
-                console.log("here2");
-                console.log(linkedRecordQueries);
-                for (var j = 0; j < linkedRecordQueries[i].length; j++) {
 
-                    if (tableRecordsIds.includes(linkedRecordQueries[i].id)) {
-                        linkedRecordsCount += 1;
-                        console.log("here3");
+            } else {
+
+                linkedRecords = tableRecords[i].getCellValue(relationshipFieldId);
+
+                if (linkedRecords == null || linkedRecords.length == 0) {
+                    happiness += 2;
+
+                } else {
+                    for (var j = 0; j < linkedRecords.length; j++) {
+
+                        if (tableRecordIds.includes(linkedRecords[j].id)) {
+                            linkedRecordsCount += 1;
+                        }
+
                     }
 
-                }
+                    if (linkedRecordsCount == linkedRecords.length) {
+                        happiness += 2;
+                    } else if (linkedRecordsCount >= 1) {
+                        happiness += linkedRecordsCount;
+                    } else {
 
-                if (linkedRecordsCount == linkedRecordQueries[i].length) {
-                    happiness += 2;
-                } else if (linkedRecordsCount >= 1) {
-                    happiness += linkedRecordsCount;
-                } else {
-
+                    }
                 }
             }
         }
     }
+    return happiness;
 }
 
 // Render the seating chart
@@ -554,6 +649,8 @@ function renderSeatingChart(guestNameArray, numTables, numChairs) {
         return <div>
             {formattedRecords}
         </div>;
+    } else if (guestNameArray == null || guestNameArray == ""){
+        return "";
     } else {
         return "Sorry, the chart can't be generated at this time.";
     }
@@ -598,14 +695,16 @@ function SaveSeatingChartData(props) {
 
     const seatingChartRecords = useRecords(dataTable, {fields: [chartNameFieldId]});
 
-    var chartNameWillBeOverwritten = false;
+    const [chartNameWillBeOverwritten, setChartNameWillBeOverwritten] = useState(false);
 
-    var saveCompleted = false;
+    const [saveCompleted, setSaveCompleted] = useState(false);
 
     if (saveData && !saveCompleted) {
         for (var i = 0; i < seatingChartRecords.length; i++) {
             if (seatingChartRecords[i].getCellValueAsString(chartNameFieldId) == chartName) {
-                chartNameWillBeOverwritten = true;
+                console.log("here");
+                setChartNameWillBeOverwritten(true);
+                setSaveData(false);
                 break;
             } else {
 
@@ -613,30 +712,31 @@ function SaveSeatingChartData(props) {
         }
     }
 
-    var savingInProgress = true;
-
-    if (saveData && !chartNameWillBeOverwritten) {
+    if (saveData && !chartNameWillBeOverwritten && !saveCompleted) {
         var recordsToUpdate = [];
+        console.log("here2");
 
         for (var j = 0; j < records.length; j++) {
-            if (records[j] != "") {
+            if (records[j] != "" && records[j] != null) {
                 recordsToUpdate.push({fields: {
                     [chartNameFieldId]: chartName,
                     [tableNumFieldId]: Math.floor(j / numChairs) + 1,
                     [chairNumFieldId]: (j % numChairs) + 1,
-                    [guestNameFieldId]: [{id: records[j].id}]
+                    [guestNameFieldId]: [{id: records[j]}]
                 }});
             } else {
 
             }
         }
 
-        saveCompleted = true;
-        //savingInProgress = createChartRecords(dataTable, recordsToUpdate);
+        setSaveCompleted(true);
+        createChartRecords(dataTable, recordsToUpdate);
     }
 
     const [showHomeScreen, setHomeScreen] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+    console.log(chartNameWillBeOverwritten);
     if (showHomeScreen) {
         return <SeatingChartBlock />
     } else if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
@@ -645,15 +745,24 @@ function SaveSeatingChartData(props) {
             <SettingsComponent />
 
             </div>;
-    } else if (saveData && !chartNameWillBeOverwritten && savingInProgress) {
-        return <div><Loader scale={0.3} /></div>;
-    } else if (saveData && !chartNameWillBeOverwritten && !savingInProgress) {
+    } else if (saveData && !chartNameWillBeOverwritten) {
         return <div>Save Completed
             <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
         </div>;
     } else {
         return <div>
-            <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
+            {!saveData && <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
+            {saveData && <Button onClick={(e) => {setIsDialogOpen(true)} } icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
+            {isDialogOpen && <ConfirmationDialog
+                title="Are you sure you want to leave without saving?"
+                body="If you leave without saving, you won't be able to access this chart again."
+                confirmButtonText="Continue without saving"
+                onConfirm={() => {
+                    setIsDialogOpen(false);
+                    setHomeScreen(true);
+                }}
+                onCancel={() => setIsDialogOpen(false)}
+            />}
 
             <FormField label="New Seating Chart Name">
                 <Input value={chartName} required={true} onChange={e => setChartName(e.target.value)} />
