@@ -963,23 +963,26 @@ function SaveSeatingChartData(props) {
 // create the chart records asynchronously
 async function createChartRecords(dataTable, recordsToUpdate) {
 
-    const batchSize = 50;
+    const batchSize = 49;
     var secondNum;
 
     // if there are less than 50 records, update them
     if (recordsToUpdate.length < 50) {
         dataTable.createRecordsAsync(recordsToUpdate);
+
     } else {
         var i = 0;
 
         // otherwise, split the records into batches of 50 records to update
         while (i < recordsToUpdate.length) {
+
             secondNum = i + batchSize;
             const updateBatch = recordsToUpdate.slice(i, secondNum);
 
-            await dataTable.createRecordsAsync(recordsToUpdate);
+            await dataTable.createRecordsAsync(updateBatch);
 
             i += batchSize;
+
         }
     }
 
