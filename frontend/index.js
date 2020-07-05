@@ -1,24 +1,11 @@
-//add styling, full screen vs. small screen,
-//add info and dialog boxes
-//instructions to close settings
-//error on home page screen
-//add error messages for disabled buttons
-
-//check permissions - commenter and read-only can generate chart (but not save?), add option?, find way to check permissions to stop save/generate
-//test errors for load seating chart
-//test errors for new seating chart
+//test errors for all screens
 //test render chart with bad values
-//check save with 50+ records (check can't get to save if commenter/readonly) - need to check permission separately?
+//check save with 50+ records, loading table with 50+ records
 //when change table problems happen (clear globalconfig?)
-//test seating automation with more people (add loading icon)
-//check parseInt
-//try loading table with 50+ records (Add loading icons?)
+//test seating automation with more people
+//loading icons?
 
 //add comments
-
-//save data check chart name problem (and creation)
-//editing seating chart after the fact?
-//regenerate chart button?
 
 import {
     initializeBlock,
@@ -29,6 +16,10 @@ import {
     useSettingsButton,
     useLoadable,
     useWatchable,
+    Text,
+    Dialog,
+    Icon,
+    Heading,
     Box,
     ConfirmationDialog,
     SwitchSynced,
@@ -58,9 +49,29 @@ function SeatingChartBlock() {
     const [showNewChart, setShowNewChart] = useState(false);
     const [loadExistingChart, setLoadExistingChart] = useState(false);
 
+    const base = useBase();
+
+    const globalConfig = useGlobalConfig();
+
+    const dataTableId = globalConfig.get('dataTableId');
+    const dataTable = base.getTableByIdIfExists(dataTableId);
+
+    const chartNameFieldId = globalConfig.get('chartNameFieldId');
+    const guestNameFieldId = globalConfig.get('guestNameFieldId');
+    const tableNumFieldId = globalConfig.get('tableNumFieldId');
+    const chairNumFieldId = globalConfig.get('chairNumFieldId');
+
+    const guestTableId = globalConfig.get('guestTableId');
+    const guestTable = base.getTableByIdIfExists(guestTableId);
+
+    const relationshipFieldId = globalConfig.get('relationshipFieldId');
+    const originalGuestNameFieldId = globalConfig.get('originalGuestNameFieldId');
+
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
     // show settings
-    if (isShowingSettings) {
-        return <SettingsComponent />;
+    if (isShowingSettings || (dataTable == null || chartNameFieldId == null || guestNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null || guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null)) {
+        return <SettingsComponent message="Welcome to the Seating Chart Block. Please fill out these initial settings before using the block. Settings must first be initialized by a user with Editor permissions. You can return to these settings at any time by pressing the settings button in the top right corner." />;
 
     // show choices to create a new seating chart or load an existing seating chart
     } else if (!showNewChart && !loadExistingChart) {
@@ -75,16 +86,27 @@ function SeatingChartBlock() {
                     justifyContent="flex-start"
                     flexDirection="column"
                 >
-                    <Box position="relative" flex="auto" padding={1} margin={3}>
-                        <Button onClick={() => setShowNewChart(true)} icon="cog">
+                    <Heading size="large">Seating Chart Block</Heading>
+                    <Box position="relative" display="flex" flexDirection="column" alignItems="center" justifyContent="space-around" padding={1} margin={3}>
+                        <Button onClick={() => setShowNewChart(true)} marginY={2} icon="cog">
                             Create a New Seating Chart
                             </Button>
-                    </Box>
-
-                    <Box position="relative" flex="auto" padding={1} margin={3}>
-                        <Button onClick={() => setLoadExistingChart(true)} icon="download">
+                        <Button onClick={() => setLoadExistingChart(true)} marginY={2} icon="download">
                             Load an Existing Seating Chart
                         </Button>
+                        <Button onClick={() => setIsDialogOpen(true)} marginY={2} icon="info">About the Seating Chart Block</Button>
+
+                        {isDialogOpen && (
+                            <Dialog onClose={() => setIsDialogOpen(false)} width="320px">
+                              <Dialog.CloseButton />
+                              <Heading>About the Seating Chart Block</Heading>
+                              <Text variant="paragraph">
+                                The Seating Chart Block is used to create and view automatically generated best-fit seating charts.
+                                The charts are automatically generated using given information about how guests are related to each other (stored in a linked record field).
+                                After a chart is generated, it may be saved to another table, so you can load that chart to look at it again, edit the chart, or use that data in another visualization block.
+                              </Text>
+                              <Button onClick={() => setIsDialogOpen(false)}>Close</Button>
+                            </Dialog>)}
                     </Box>
             </Box>;
 
@@ -103,14 +125,13 @@ function SeatingChartBlock() {
 }
 
 // settings component
-function SettingsComponent() {
+function SettingsComponent(props) {
+
+    var message = props.message;
 
     const base = useBase();
 
     const globalConfig = useGlobalConfig();
-
-    const commenterGenerateChart = globalConfig.get('commenterGenerateChart');
-    const readOnlyGenerateChart = globalConfig.get('readOnlyGenerateChart');
 
     const dataTableId = globalConfig.get('dataTableId');
     const dataTable = base.getTableByIdIfExists(dataTableId);
@@ -126,59 +147,55 @@ function SettingsComponent() {
     const relationshipFieldId = globalConfig.get('relationshipFieldId');
     const originalGuestNameFieldId = globalConfig.get('originalGuestNameFieldId');
 
+    var dataTableExists = false;
+    var guestTableExists = false;
+
+    if (dataTable != null) {
+        dataTableExists = true;
+    }
+
+    if (guestTable != null) {
+        guestTableExists = true;
+    }
+
     return <Box
                 position="absolute"
-                top={0}
-                left={0}
-                right={0}
-                bottom={0}
                 display="flex"
                 alignItems="left"
                 justifyContent="flex-start"
                 flexDirection="column"
                 padding={2}
             >
+            <Heading as="h2" size="large" marginY={2}>Settings</Heading>
 
-            <h2>Permissions settings</h2>
-            <Label htmlFor="commenter-generate-chart">Do you want commenters to be able to generate charts? They won't be able to save them.</Label>
-            <SwitchSynced id="commenter-generate-chart" globalConfigKey="commenterGenerateChart" />
+            <div marginY={1}>{message}</div>
 
-            <Label htmlFor="read-only-generate-chart">Do you want read-only users to be able to generate charts? They won't be able to save them.</Label>
-            <SwitchSynced id="read-only-generate-chart" globalConfigKey="readOnlyGenerateChart" />
+            <Heading marginY={2} borderTop="default" paddingY={1}>Settings to create a new seating chart</Heading>
+            <Label htmlFor="guest-table-picker" marginTop={2}>Table that contains guest data</Label>
+            <TablePickerSynced id="guest-table-picker" marginBottom={2} globalConfigKey="guestTableId" />
 
-            <h2>Settings to create a new seating chart</h2>
-            <Label htmlFor="guest-table-picker">Select table that contains guest data</Label>
-            <TablePickerSynced id="guest-table-picker" globalConfigKey="guestTableId" />
+            {guestTableExists && <Label htmlFor="original-guest-name-field-picker" marginTop={2}>Field that contains the name of each guest</Label>}
+            {guestTableExists && <FieldPickerSynced id="original-guest-name-field-picker" marginBottom={2} table={guestTable} allowedTypes={[FieldType.SINGLE_LINE_TEXT]} globalConfigKey="originalGuestNameFieldId" />}
 
-            <Label htmlFor="original-guest-name-field-picker">Select field that contains the name for each guest</Label>
-            <FieldPickerSynced id="original-guest-name-field-picker" table={guestTable} globalConfigKey="originalGuestNameFieldId" />
+            {guestTableExists && <Label htmlFor="relationship-field-picker" marginTop={2}>Field that contains relationship data for each guest (a field that links to other guest records)</Label>}
+            {guestTableExists && <FieldPickerSynced id="relationship-field-picker" marginBottom={2} table={guestTable} allowedTypes={[FieldType.MULTIPLE_RECORD_LINKS]} globalConfigKey="relationshipFieldId" />}
 
-            <Label htmlFor="relationship-field-picker">Select field that contains relationship data for each guest</Label>
-            <FieldPickerSynced id="relationship-field-picker" table={guestTable} globalConfigKey="relationshipFieldId" />
+        <Heading marginY={2} borderTop="default" paddingY={1}>Settings to save or load a new seating chart</Heading>
 
-        <h2>Settings to save or load a new seating chart</h2>
+        <Label htmlFor="data-table-picker" marginTop={2}>Table to store seating chart data</Label>
+        <TablePickerSynced id="data-table-picker" globalConfigKey="dataTableId" marginBottom={2} />
 
-        // table to store the seating chart data
-        <Label htmlFor="data-table-picker">Select table to store seating chart data</Label>
-        <TablePickerSynced id="data-table-picker" globalConfigKey="dataTableId" />
+        {dataTableExists && <Label htmlFor="chart-name-field-picker" marginTop={2}>Field that contains the seating chart name</Label>}
+        {dataTableExists && <FieldPickerSynced id="chart-name-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.SINGLE_LINE_TEXT]} globalConfigKey="chartNameFieldId" />}
 
-        // check is text field
-        // field to store the seating chart name
-        <Label htmlFor="chart-name-field-picker">Select field that contains the seating chart name</Label>
-        <FieldPickerSynced id="chart-name-field-picker" table={dataTable} allowedTypes={FieldType.TEXT} globalConfigKey="chartNameFieldId" />
+        {dataTableExists && <Label htmlFor="guest-name-field-picker" marginTop={2}>Field that contains the guest lookup field (a field that links to a record from the guest table)</Label>}
+        {dataTableExists && <FieldPickerSynced id="guest-name-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.MULTIPLE_RECORD_LINKS]} globalConfigKey="guestNameFieldId" />}
 
-        //check unique and that is lookup?
-        // field to store the lookup to the guest table
-        <Label htmlFor="guest-name-field-picker">Select field that contains the guest lookup field</Label>
-        <FieldPickerSynced id="guest-name-field-picker" table={dataTable} globalConfigKey="guestNameFieldId" />
+        {dataTableExists && <Label htmlFor="table-num-field-picker" marginTop={2}>Field that contains the table number</Label>}
+        {dataTableExists && <FieldPickerSynced id="table-num-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.NUMBER]} globalConfigKey="tableNumFieldId" />}
 
-        // field that stores the table number
-        <Label htmlFor="table-num-field-picker">Select field that contains the table number</Label>
-        <FieldPickerSynced id="table-num-field-picker" table={dataTable} allowedTypes={[FieldType.NUMBER]} globalConfigKey="tableNumFieldId" />
-
-        // field that stores the chair number
-        <Label htmlFor="chair-num-field-picker">Select field that contains the chair number</Label>
-        <FieldPickerSynced id="chair-num-field-picker" allowedTypes={[FieldType.NUMBER]} table={dataTable} globalConfigKey="chairNumFieldId" />
+        {dataTableExists && <Label htmlFor="chair-num-field-picker" marginTop={2}>Field that contains the chair number</Label>}
+        {dataTableExists && <FieldPickerSynced id="chair-num-field-picker" marginBottom={2} paddingBottom={2} allowedTypes={[FieldType.NUMBER]} table={dataTable} globalConfigKey="chairNumFieldId" />}
 
     </Box>;
 }
@@ -200,30 +217,27 @@ function NewSeatingChart() {
     const relationshipFieldId = globalConfig.get('relationshipFieldId');
     const originalGuestNameFieldId = globalConfig.get('originalGuestNameFieldId');
 
-    const commenterGenerateChart = globalConfig.get('commenterGenerateChart');
-    const readOnlyGenerateChart = globalConfig.get('readOnlyGenerateChart');
-
     const guestTable = base.getTableByIdIfExists(guestTableId);
-
-    if (guestTableId == null || relationshipFieldId == null || originalGuestNameFieldId == null) {
-        return <SettingsComponent />;
-    }
 
     const numTables = globalConfig.get('numTables');
     const numChairs = globalConfig.get('numChairs');
 
     // disable Generate Seating Chart button until fields are filled
-    const buttonDisabled = numTables <= 0 || numTables == null || numChairs <= 0 ||  numChairs == null || guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null || generateChart;
+    const buttonDisabled = numTables <= 0 || numTables == null || numChairs <= 0 ||  numChairs == null || guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null || generateChart || !globalConfig.hasPermissionToSet("renderRecords") || !globalConfig.hasPermissionToSet("saveRecords");
 
     // note if number of guests exceeds capacity given
     var errorMessage = "";
 
     var records = useRecords(guestTable, {fields: [relationshipFieldId, originalGuestNameFieldId]});
 
-    if (records.length < 2) {
+    if (numTables == null || numChairs == null || numTables == "" || numChairs == "") {
+        errorMessage = "Please fill out all the fields.";
+    } else if (records.length < 2) {
         errorMessage = "You must have at least two people on your list to create a seating chart.";
     } else if (!buttonDisabled && numTables != null && numChairs != null && records.length > numTables * numChairs) {
         errorMessage = "You do not have enough capacity to seat all your guests. If you click Generate Seating Chart, a chart will generate using the first " + numTables * numChairs + " people on your list."
+    } else if (!globalConfig.hasPermissionToSet("renderRecords") || !globalConfig.hasPermissionToSet("saveRecords")) {
+        errorMessage = "You don't have permission to generate a seating chart.";
     }
 
     const [generateChart, setGenerateChart] = useState(false);
@@ -248,12 +262,17 @@ function NewSeatingChart() {
                 idOnlyFinalRecords.push("");
             }
         }
-
-        setChartGenerated(true);
-        setGenerateChart(false);
-        globalConfig.setAsync("renderRecords", nameOnlyFinalRecords);
-        globalConfig.setAsync("saveRecords", idOnlyFinalRecords);
     }
+
+    useEffect(() => {
+        if (generateChart && !chartGenerated) {
+            globalConfig.setAsync("renderRecords", nameOnlyFinalRecords);
+            globalConfig.setAsync("saveRecords", idOnlyFinalRecords);
+
+            setChartGenerated(true);
+            setGenerateChart(false);
+        }
+    });
 
     if (chartGenerated) {
         nameOnlyFinalRecords = globalConfig.get("renderRecords");
@@ -269,7 +288,7 @@ function NewSeatingChart() {
     if (showHomeScreen) {
         return <SeatingChartBlock />;
     } else if (guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null) {
-        return <SettingsComponent />;
+        return <SettingsComponent message="Before proceeding with creating a new chart, fill out the appropriate section. You can open or close Settings at any time with the button on the top right of your screen." />;
     } else if (saveChartData) {
         return <SaveSeatingChartData records={idOnlyFinalRecords} numChairs={numChairs} numTables={numTables} chart={chart} />;
     } else {
@@ -281,47 +300,56 @@ function NewSeatingChart() {
                     right={0}
                     bottom={0}
                     display="flex"
+                    alignItems="center"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                >
+
+                <Box
+                    position="absolute"
+                    display="flex"
                     alignItems="left"
                     justifyContent="flex-start"
                     flexDirection="column"
-                    maxWidth="300px"
-                    margin-left="auto"
-                    margin-right="auto"
+                    maxWidth="500px"
+                    width="100%"
+                    marginX="auto"
+                    padding={2}
                 >
-            {!chartGenerated && <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
-            {chartGenerated && <Button onClick={(e) => {setIsDialogOpen(true)} } icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
-            {isDialogOpen && <ConfirmationDialog
-                title="Are you sure you want to leave without saving?"
-                body="If you leave without saving, you won't be able to access this chart again."
-                confirmButtonText="Continue without saving"
-                onConfirm={() => {
-                    setIsDialogOpen(false);
-                    setHomeScreen(true);
-                }}
-                onCancel={() => setIsDialogOpen(false)}
-            />}
-
-
-
-            <FormField label="Number of Tables">
+                    {!chartGenerated && <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
+                    {chartGenerated && <Button onClick={(e) => {setIsDialogOpen(true)} } icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
+                    <Heading size="large" as="h2" marginY={3}>New seating chart</Heading>
+                {isDialogOpen && <ConfirmationDialog
+                    title="Are you sure you want to leave without saving?"
+                    body="If you leave without saving, you won't be able to access this chart again."
+                    confirmButtonText="Continue without saving"
+                    onConfirm={() => {
+                        setIsDialogOpen(false);
+                        setHomeScreen(true);
+                    }}
+                    onCancel={() => setIsDialogOpen(false)}
+                />}
+            {!chartGenerated && <FormField label="Number of Tables">
                 <InputSynced type="number" min="1" required={true} globalConfigKey="numTables" />
-            </FormField>
+            </FormField>}
 
-            <FormField label="Number of Chairs">
+            {!chartGenerated && <FormField label="Number of Chairs">
                 <InputSynced required={true} min="1" type="number" globalConfigKey="numChairs" />
-            </FormField>
+            </FormField>}
 
-            {errorMessage}
-
+            {!chartGenerated && <Box padding={2}>{errorMessage}</Box>}
             {!chartGenerated && <Button onClick={e => setGenerateChart(true)} disabled={buttonDisabled} icon="personalAuto" variant="primary">
                 Generate Seating Chart
             </Button>}
 
+            {chartGenerated && <Button onClick={() => setSaveChartData(true)} variant="primary" icon="upload">
+                Save Chart
+            </Button>}
+
             {chartGenerated && chart}
 
-            {chartGenerated && <Button onClick={() => setSaveChartData(true)} variant="primary" icon="upload">
-                Store Data
-            </Button>}
+        </Box>
+
         </Box>;
     }
 }
@@ -347,11 +375,6 @@ function LoadExistingSeatingChart() {
     const chairNumFieldId = globalConfig.get('chairNumFieldId');
 
     const dataTable = base.getTableByIdIfExists(dataTableId);
-
-    if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
-        return <div>Before proceeding with loading saved data you must fill out some information.
-        <SettingsComponent /></div>;
-    }
 
     const chartNameField = dataTable.getFieldByIdIfExists(chartNameFieldId);
 
@@ -382,9 +405,9 @@ function LoadExistingSeatingChart() {
     }
 
     const [renderChart, setRenderChart] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     var chart;
-    var errorMessage = "";
 
     if (renderChart) {
         var maxTableNum = 0;
@@ -426,12 +449,12 @@ function LoadExistingSeatingChart() {
         }
 
         if (filteredArray.length == 0 || maxChairNum == 0 || maxTableNum == 0) {
-            errorMessage = "That chart could not be found. Please try a different name.";
+            setErrorMessage("That chart could not be found. Please try a different name.");
+            setRenderChart(false);
         } else {
 
             chart = renderSeatingChart(guestNameArray, maxTableNum, maxChairNum);
         }
-
     }
 
     const [showHomeScreen, setHomeScreen] = useState(false);
@@ -439,11 +462,7 @@ function LoadExistingSeatingChart() {
     if (showHomeScreen) {
         return <SeatingChartBlock />
     } else if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
-        return <div>
-            Before proceeding with loading saved data you must fill out some information.
-            <SettingsComponent />
-
-            </div>;
+        return <SettingsComponent message="Before proceeding with loading saved data, fill out the appropriate section. You can open or close Settings at any time using the button on the top right of your screen."/>;
     } else {
         return <Box
                     position="absolute"
@@ -452,23 +471,38 @@ function LoadExistingSeatingChart() {
                     right={0}
                     bottom={0}
                     display="flex"
-                    alignItems="left"
+                    alignItems="center"
                     justifyContent="flex-start"
                     flexDirection="column"
                 >
-            <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
 
-            <FormField label="Seating Chart Name">
+                <Box
+                    position="absolute"
+                    display="flex"
+                    alignItems="left"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                    maxWidth="500px"
+                    width="100%"
+                    marginX="auto"
+                    padding={2}
+                >
+                <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
+                <Heading size="large" as="h2" marginY={3}>Load seating chart</Heading>
+
+            {!renderChart && <FormField label="Seating Chart Name">
                 <Input value={chartName} required={true} onChange={e => setChartName(e.target.value)} />
-            </FormField>
+            </FormField>}
 
-            <Button onClick={e => setRenderChart(true)} disabled={buttonDisabled} icon="download" variant="primary">
+            {!renderChart && <Box padding={2}>{errorMessage}</Box>}
+
+            {!renderChart && <Button marginTop={1} onClick={e => setRenderChart(true)} disabled={buttonDisabled} icon="download" variant="primary">
                 Load Chart
-            </Button>
-
-            {renderChart && errorMessage}
+            </Button>}
 
             {renderChart && <div>{chart}</div>}
+
+            </Box>
 
         </Box>;
     }
@@ -503,7 +537,6 @@ function seatingAutomation(records, numTables, numChairs, relationshipFieldId) {
 
     while (bestScore < (numTables * numChairs * 2 * 0.75) && currentTimes < maxTimes) {
 
-        //rearrange
         newRecords = rearrangeRecords(currentRecords, numTables, numChairs);
 
         newScore = seatingAutomationHelper(newRecords, numTables, numChairs, relationshipFieldId);
@@ -664,6 +697,7 @@ function SaveSeatingChartData(props) {
     var records = props.records;
     var numChairs = props.numChairs;
     var numTables = props.numTables;
+    var chart = props.chart;
 
     useSettingsButton(function() {
         setIsShowingSettings(!isShowingSettings);
@@ -699,22 +733,35 @@ function SaveSeatingChartData(props) {
 
     const [saveCompleted, setSaveCompleted] = useState(false);
 
-    if (saveData && !saveCompleted) {
+    const [checkSaveData, setCheckSaveData] = useState(false);
+
+    var recordsToUpdate = [];
+
+    if (checkSaveData && !saveData) {
+
+        var overwritten = false;
         for (var i = 0; i < seatingChartRecords.length; i++) {
+
             if (seatingChartRecords[i].getCellValueAsString(chartNameFieldId) == chartName) {
-                console.log("here");
-                setChartNameWillBeOverwritten(true);
-                setSaveData(false);
+
+                overwritten = true;
+
                 break;
             } else {
 
             }
         }
+
+        if (!overwritten) {
+            setSaveData(true);
+            setChartNameWillBeOverwritten(false);
+        } else {
+            setChartNameWillBeOverwritten(true);
+            setCheckSaveData(false);
+        }
     }
 
-    if (saveData && !chartNameWillBeOverwritten && !saveCompleted) {
-        var recordsToUpdate = [];
-        console.log("here2");
+    if (saveData && !saveCompleted) {
 
         for (var j = 0; j < records.length; j++) {
             if (records[j] != "" && records[j] != null) {
@@ -729,30 +776,77 @@ function SaveSeatingChartData(props) {
             }
         }
 
+
+        //createChartRecords(dataTable, recordsToUpdate);
         setSaveCompleted(true);
-        createChartRecords(dataTable, recordsToUpdate);
     }
 
     const [showHomeScreen, setHomeScreen] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-    console.log(chartNameWillBeOverwritten);
     if (showHomeScreen) {
         return <SeatingChartBlock />
     } else if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
         return <div>
-            Before proceeding with saving data you must fill out some information.
-            <SettingsComponent />
+
+            <SettingsComponent message="Before proceeding to save data, you must fill out information in the appropriate section. You can open or close Settings at any time using the button on the top right of your screen." />
 
             </div>;
-    } else if (saveData && !chartNameWillBeOverwritten) {
-        return <div>Save Completed
-            <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
-        </div>;
+    } else if (saveData && !chartNameWillBeOverwritten && saveCompleted) {
+        return <Box
+                    position="absolute"
+                    top={0}
+                    left={0}
+                    right={0}
+                    bottom={0}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                >
+
+                <Box
+                    position="absolute"
+                    display="flex"
+                    alignItems="left"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                    maxWidth="500px"
+                    width="100%"
+                    marginX="auto"
+                    padding={2}
+                >
+                <Heading as="h2" marginY={2} size="large">Save successful</Heading>
+                <Box padding={2} marginBottom={3}>Your chart was successfully saved.</Box>
+            <Button onClick={(e) => setHomeScreen(true)} variant="primary" icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
+            </Box>
+        </Box>;
     } else {
-        return <div>
-            {!saveData && <Button onClick={(e) => setHomeScreen(true)} icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
-            {saveData && <Button onClick={(e) => {setIsDialogOpen(true)} } icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>}
+        return <Box
+                    position="absolute"
+                    top={0}
+                    left={0}
+                    right={0}
+                    bottom={0}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                >
+
+                <Box
+                    position="absolute"
+                    display="flex"
+                    alignItems="left"
+                    justifyContent="flex-start"
+                    flexDirection="column"
+                    maxWidth="500px"
+                    width="100%"
+                    marginX="auto"
+                    padding={2}
+                >
+                <Button onClick={(e) => {setIsDialogOpen(true)} } icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
+            <Heading size="large" as="h2" marginY={2}>Save seating chart</Heading>
             {isDialogOpen && <ConfirmationDialog
                 title="Are you sure you want to leave without saving?"
                 body="If you leave without saving, you won't be able to access this chart again."
@@ -768,19 +862,19 @@ function SaveSeatingChartData(props) {
                 <Input value={chartName} required={true} onChange={e => setChartName(e.target.value)} />
             </FormField>
 
-            <Button onClick={e => setSaveData(true)} disabled={buttonDisabled} icon="upload" variant="primary">
-                Save Records
+            {chartNameWillBeOverwritten && <Box padding={2}>That chart name is already in use. Please choose another name.</Box>}
+
+            <Button onClick={e => setCheckSaveData(true)} disabled={buttonDisabled} icon="upload" variant="primary">
+                Save Chart
             </Button>
 
-            {chartNameWillBeOverwritten && "That chart name is already in use. Please choose another name."}
-
-            {props.chart}
-        </div>;
+            {chart}
+        </Box></Box>;
     }
 }
 
 async function createChartRecords(dataTable, recordsToUpdate) {
-    //save the data;
+
     const batchSize = 50;
     var secondNum;
 
