@@ -1,11 +1,3 @@
-//check save with 50+ records, loading table with 50+ records
-//test seating automation with more people
-//loading icons?
-
-//add comments
-
-//save chart not working in production
-
 import {
     initializeBlock,
     useBase,
@@ -132,6 +124,7 @@ function SettingsComponent(props) {
 
     const globalConfig = useGlobalConfig();
 
+    // seating chart data table and fields
     const dataTableId = globalConfig.get('dataTableId');
     const dataTable = base.getTableByIdIfExists(dataTableId);
 
@@ -140,6 +133,7 @@ function SettingsComponent(props) {
     const tableNumFieldId = globalConfig.get('tableNumFieldId');
     const chairNumFieldId = globalConfig.get('chairNumFieldId');
 
+    // guest data table and fields
     const guestTableId = globalConfig.get('guestTableId');
     const guestTable = base.getTableByIdIfExists(guestTableId);
 
@@ -165,38 +159,38 @@ function SettingsComponent(props) {
                 flexDirection="column"
                 padding={2}
             >
-            <Heading as="h2" size="large" marginY={2}>Settings</Heading>
+                <Heading as="h2" size="large" marginY={2}>Settings</Heading>
 
-            <div marginY={1}>{message}</div>
+                <div marginY={1}>{message}</div>
 
-            <Heading marginY={2} borderTop="default" paddingY={1}>Settings to create a new seating chart</Heading>
-            <Label htmlFor="guest-table-picker" marginTop={2}>Table that contains guest data</Label>
-            <TablePickerSynced id="guest-table-picker" marginBottom={2} globalConfigKey="guestTableId" />
+                <Heading marginY={2} borderTop="default" paddingY={1}>Settings to create a new seating chart</Heading>
+                <Label htmlFor="guest-table-picker" marginTop={2}>Table that contains guest data</Label>
+                <TablePickerSynced id="guest-table-picker" marginBottom={2} globalConfigKey="guestTableId" />
 
-            {guestTableExists && <Label htmlFor="original-guest-name-field-picker" marginTop={2}>Field that contains the name of each guest</Label>}
-            {guestTableExists && <FieldPickerSynced id="original-guest-name-field-picker" marginBottom={2} table={guestTable} allowedTypes={[FieldType.SINGLE_LINE_TEXT]} globalConfigKey="originalGuestNameFieldId" />}
+                {guestTableExists && <Label htmlFor="original-guest-name-field-picker" marginTop={2}>Field that contains the name of each guest</Label>}
+                {guestTableExists && <FieldPickerSynced id="original-guest-name-field-picker" marginBottom={2} table={guestTable} allowedTypes={[FieldType.SINGLE_LINE_TEXT]} globalConfigKey="originalGuestNameFieldId" />}
 
-            {guestTableExists && <Label htmlFor="relationship-field-picker" marginTop={2}>Field that contains relationship data for each guest (a field that links to other guest records)</Label>}
-            {guestTableExists && <FieldPickerSynced id="relationship-field-picker" marginBottom={2} table={guestTable} allowedTypes={[FieldType.MULTIPLE_RECORD_LINKS]} globalConfigKey="relationshipFieldId" />}
+                {guestTableExists && <Label htmlFor="relationship-field-picker" marginTop={2}>Field that contains relationship data for each guest (a field that links to other guest records)</Label>}
+                {guestTableExists && <FieldPickerSynced id="relationship-field-picker" marginBottom={2} table={guestTable} allowedTypes={[FieldType.MULTIPLE_RECORD_LINKS]} globalConfigKey="relationshipFieldId" />}
 
-        <Heading marginY={2} borderTop="default" paddingY={1}>Settings to save or load a new seating chart</Heading>
+                <Heading marginY={2} borderTop="default" paddingY={1}>Settings to save or load a new seating chart</Heading>
 
-        <Label htmlFor="data-table-picker" marginTop={2}>Table to store seating chart data</Label>
-        <TablePickerSynced id="data-table-picker" globalConfigKey="dataTableId" marginBottom={2} />
+                <Label htmlFor="data-table-picker" marginTop={2}>Table to store seating chart data</Label>
+                <TablePickerSynced id="data-table-picker" globalConfigKey="dataTableId" marginBottom={2} />
 
-        {dataTableExists && <Label htmlFor="chart-name-field-picker" marginTop={2}>Field that contains the seating chart name</Label>}
-        {dataTableExists && <FieldPickerSynced id="chart-name-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.SINGLE_LINE_TEXT]} globalConfigKey="chartNameFieldId" />}
+                {dataTableExists && <Label htmlFor="chart-name-field-picker" marginTop={2}>Field that contains the seating chart name</Label>}
+                {dataTableExists && <FieldPickerSynced id="chart-name-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.SINGLE_LINE_TEXT]} globalConfigKey="chartNameFieldId" />}
 
-        {dataTableExists && <Label htmlFor="guest-name-field-picker" marginTop={2}>Field that contains the guest lookup field (a field that links to a record from the guest table)</Label>}
-        {dataTableExists && <FieldPickerSynced id="guest-name-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.MULTIPLE_RECORD_LINKS]} globalConfigKey="guestNameFieldId" />}
+                {dataTableExists && <Label htmlFor="guest-name-field-picker" marginTop={2}>Field that contains the guest lookup field (a field that links to a record from the guest table)</Label>}
+                {dataTableExists && <FieldPickerSynced id="guest-name-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.MULTIPLE_RECORD_LINKS]} globalConfigKey="guestNameFieldId" />}
 
-        {dataTableExists && <Label htmlFor="table-num-field-picker" marginTop={2}>Field that contains the table number</Label>}
-        {dataTableExists && <FieldPickerSynced id="table-num-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.NUMBER]} globalConfigKey="tableNumFieldId" />}
+                {dataTableExists && <Label htmlFor="table-num-field-picker" marginTop={2}>Field that contains the table number</Label>}
+                {dataTableExists && <FieldPickerSynced id="table-num-field-picker" marginBottom={2} table={dataTable} allowedTypes={[FieldType.NUMBER]} globalConfigKey="tableNumFieldId" />}
 
-        {dataTableExists && <Label htmlFor="chair-num-field-picker" marginTop={2}>Field that contains the chair number</Label>}
-        {dataTableExists && <FieldPickerSynced id="chair-num-field-picker" marginBottom={2} paddingBottom={2} allowedTypes={[FieldType.NUMBER]} table={dataTable} globalConfigKey="chairNumFieldId" />}
+                {dataTableExists && <Label htmlFor="chair-num-field-picker" marginTop={2}>Field that contains the chair number</Label>}
+                {dataTableExists && <FieldPickerSynced id="chair-num-field-picker" marginBottom={2} paddingBottom={2} allowedTypes={[FieldType.NUMBER]} table={dataTable} globalConfigKey="chairNumFieldId" />}
 
-    </Box>;
+            </Box>;
 }
 
 // new seating chart component
@@ -212,23 +206,25 @@ function NewSeatingChart() {
     const base = useBase();
     const globalConfig = useGlobalConfig();
 
+    // get guest data table and fields from globalConfig if they exist
     const guestTableId = globalConfig.get('guestTableId');
     const relationshipFieldId = globalConfig.get('relationshipFieldId');
     const originalGuestNameFieldId = globalConfig.get('originalGuestNameFieldId');
 
     const guestTable = base.getTableByIdIfExists(guestTableId);
 
+    // get the previously used values for number of tables and chairs
     const numTables = globalConfig.get('numTables');
     const numChairs = globalConfig.get('numChairs');
 
     // disable Generate Seating Chart button until fields are filled
     const buttonDisabled = numTables <= 0 || numTables == null || numChairs <= 0 ||  numChairs == null || guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null || generateChart || !globalConfig.hasPermissionToSet("renderRecords") || !globalConfig.hasPermissionToSet("saveRecords");
-
-    // note if number of guests exceeds capacity given
+n
     var errorMessage = "";
 
     var records = useRecords(guestTable, {fields: [relationshipFieldId, originalGuestNameFieldId]});
 
+    // note various error messages
     if (numTables == null || numChairs == null || numTables == "" || numChairs == "") {
         errorMessage = "Please fill out all the fields.";
     } else if (records.length < 2) {
@@ -250,8 +246,10 @@ function NewSeatingChart() {
 
     if (generateChart && !chartGenerated) {
 
+        // run the seating automation when generate chart is pressed
         finalRecords = seatingAutomation(records, numTables, numChairs, relationshipFieldId);
 
+        // get the names and ids from the records to pass to the appropriate functions
         for (var k = 0; k < finalRecords.length; k++) {
             if (finalRecords[k] != "") {
                 nameOnlyFinalRecords.push(finalRecords[k].getCellValueAsString(originalGuestNameFieldId));
@@ -263,6 +261,7 @@ function NewSeatingChart() {
         }
     }
 
+    // save records for generated chart
     useEffect(() => {
         if (generateChart && !chartGenerated) {
             globalConfig.setAsync("renderRecords", nameOnlyFinalRecords);
@@ -284,12 +283,19 @@ function NewSeatingChart() {
     const [saveChartData, setSaveChartData] = useState(false);
     const [showHomeScreen, setHomeScreen] = useState(false);
 
+    // return to the home screen
     if (showHomeScreen) {
         return <SeatingChartBlock />;
+
+    // show settings, if any data is missing
     } else if (guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null) {
         return <SettingsComponent message="Before proceeding with creating a new chart, fill out the appropriate section. You can open or close Settings at any time with the button on the top right of your screen." />;
+
+    // show the save data screen when that button is pressed
     } else if (saveChartData) {
         return <SaveSeatingChartData records={idOnlyFinalRecords} numChairs={numChairs} numTables={numTables} chart={chart} />;
+
+    // show the new seating chart screen
     } else {
 
         return <Box
@@ -367,6 +373,7 @@ function LoadExistingSeatingChart() {
 
     const globalConfig = useGlobalConfig();
 
+    // get the seating chart data table and fields from globalConfig if they exist
     const dataTableId = globalConfig.get('dataTableId');
     const guestNameFieldId = globalConfig.get('guestNameFieldId');
     const chartNameFieldId = globalConfig.get('chartNameFieldId');
@@ -377,6 +384,7 @@ function LoadExistingSeatingChart() {
 
     const chartNameField = dataTable.getFieldByIdIfExists(chartNameFieldId);
 
+    // set the sort options to retrieve chart records
     const sortOptions = {
         sorts: [
             {field: chartNameFieldId, direction: 'asc'},
@@ -408,6 +416,7 @@ function LoadExistingSeatingChart() {
 
     var chart;
 
+    // if load data is pressed
     if (renderChart) {
         var maxTableNum = 0;
         var maxChairNum = 0;
@@ -415,6 +424,7 @@ function LoadExistingSeatingChart() {
         var guestNameArray = [];
         var filteredArray = [];
 
+        // get the records and find the chair num and table num values
         for (var i = 0; i < records.length; i++) {
 
             if (records[i].getCellValue(chartNameFieldId) == chartName) {
@@ -433,6 +443,7 @@ function LoadExistingSeatingChart() {
 
         var name = "";
 
+        // get the names of the guests in the right order to render the seating chart
         for (var j = 0; j < maxTableNum * maxChairNum; j++) {
 
             for (var k = 0; k < filteredArray.length; k++) {
@@ -447,21 +458,27 @@ function LoadExistingSeatingChart() {
             name = "";
         }
 
+        // check that we actually have records for that chart name
         if (filteredArray.length == 0 || maxChairNum == 0 || maxTableNum == 0) {
             setErrorMessage("That chart could not be found. Please try a different name.");
             setRenderChart(false);
         } else {
-
+            // render the seating chart
             chart = renderSeatingChart(guestNameArray, maxTableNum, maxChairNum);
         }
     }
 
     const [showHomeScreen, setHomeScreen] = useState(false);
 
+    // show home screen
     if (showHomeScreen) {
         return <SeatingChartBlock />
+
+    // show settings, if any of that data is missing
     } else if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
         return <SettingsComponent message="Before proceeding with loading saved data, fill out the appropriate section. You can open or close Settings at any time using the button on the top right of your screen."/>;
+
+    // show the load data screen
     } else {
         return <Box
                     position="absolute"
@@ -517,6 +534,7 @@ function seatingAutomation(records, numTables, numChairs, relationshipFieldId) {
 
     var finalRecords = [];
 
+    // order the records for the automation
     for (var i = 0; i < numTables * numChairs; i++) {
         if (records[i] != null) {
             finalRecords.push(records[i]);
@@ -525,21 +543,29 @@ function seatingAutomation(records, numTables, numChairs, relationshipFieldId) {
         }
     }
 
+    // get score of first seating chart assignment
     var currentRecords = finalRecords;
     var currentScore = seatingAutomationHelper(currentRecords, numTables, numChairs, relationshipFieldId);
 
+    // assign first current score as best score
     var bestScore = currentScore;
     var bestRecords = finalRecords;
 
     var newRecords;
     var newScore = 0;
 
+    // while less than 75% of people are sitting with all the people they know
+    // and we've looped less than a maximum number of times
     while (bestScore < (numTables * numChairs * 2 * 0.75) && currentTimes < maxTimes) {
 
+        // randomly rearrange the records
         newRecords = rearrangeRecords(currentRecords, numTables, numChairs);
 
+        // get a new score
         newScore = seatingAutomationHelper(newRecords, numTables, numChairs, relationshipFieldId);
 
+        // if the new score is better than the current one, update the current score with the new one
+        // otherwise keep the current score
         if (currentScore < newScore) {
             currentScore = newScore;
             currentRecords = newRecords;
@@ -547,11 +573,13 @@ function seatingAutomation(records, numTables, numChairs, relationshipFieldId) {
 
         }
 
+        // check if the current score is better than the best score, and change the best score if so
         if (bestScore < newScore) {
             bestScore = newScore;
             bestRecords = newRecords;
         }
 
+        // if all the people are seated with everyone they know, end the process
         if (bestScore == numTables * numChairs * 2) {
             break;
         }
@@ -562,6 +590,7 @@ function seatingAutomation(records, numTables, numChairs, relationshipFieldId) {
     return bestRecords;
 }
 
+// swap two records
 function rearrangeRecords(records, numTables, numChairs) {
 
     var index1 = Math.floor(Math.random() * Math.floor(records.length));
@@ -576,6 +605,7 @@ function rearrangeRecords(records, numTables, numChairs) {
     return records;
 }
 
+// call the function to count the score for each table
 function seatingAutomationHelper(records, numTables, numChairs, relationshipFieldId) {
     var score = 0;
 
@@ -589,6 +619,7 @@ function seatingAutomationHelper(records, numTables, numChairs, relationshipFiel
     return score;
 }
 
+// count the score for each table
 function countHappiness(tableRecords, relationshipFieldId) {
     var happiness = 0;
     var linkedRecordsCount = 0;
@@ -610,6 +641,7 @@ function countHappiness(tableRecords, relationshipFieldId) {
         for (var i = 0; i < tableRecords.length; i++) {
             linkedRecordsCount = 0;
 
+            // if that seat is empty, the score is 2
             if (tableRecords[i] == null || tableRecords[i] == "") {
                 happiness += 2;
 
@@ -617,10 +649,12 @@ function countHappiness(tableRecords, relationshipFieldId) {
 
                 linkedRecords = tableRecords[i].getCellValue(relationshipFieldId);
 
+                // if they don't have any relationships, their score is 2
                 if (linkedRecords == null || linkedRecords.length == 0) {
                     happiness += 2;
 
                 } else {
+                    // otherwise count each of their relationships that is at the same table
                     for (var j = 0; j < linkedRecords.length; j++) {
 
                         if (tableRecordIds.includes(linkedRecords[j].id)) {
@@ -629,10 +663,13 @@ function countHappiness(tableRecords, relationshipFieldId) {
 
                     }
 
+                    // if they are seated with all their relationships, set their score to 2
                     if (linkedRecordsCount == linkedRecords.length) {
                         happiness += 2;
+                    // if they are seating with at least one of their relationships, set their score to 1
                     } else if (linkedRecordsCount >= 1) {
                         happiness += linkedRecordsCount;
+                    // otherwise set their score to 0
                     } else {
 
                     }
@@ -662,6 +699,7 @@ function renderSeatingChart(guestNameArray, numTables, numChairs) {
 
         var test = 0;
 
+        // format the records by table and chair
         var formattedRecords =
 
             tableArray.map((tableValue, tableIndex) => {
@@ -705,6 +743,7 @@ function SaveSeatingChartData(props) {
     const base = useBase();
     const globalConfig = useGlobalConfig();
 
+    // get the seating chart data table and fields from globalConfig if they exist
     const dataTableId = globalConfig.get('dataTableId');
     const guestNameFieldId = globalConfig.get('guestNameFieldId');
     const chartNameFieldId = globalConfig.get('chartNameFieldId');
@@ -718,6 +757,7 @@ function SaveSeatingChartData(props) {
 
     var buttonDisabled = true;
 
+    // disable the button if no chart name is chosen
     if (chartName == "" || chartName == null) {
 
     } else {
@@ -736,6 +776,8 @@ function SaveSeatingChartData(props) {
 
     var recordsToUpdate = [];
 
+
+    // check to make sure that the chart name chosen doesn't already exist
     if (checkSaveData && !saveData) {
 
         var overwritten = false;
@@ -760,8 +802,10 @@ function SaveSeatingChartData(props) {
         }
     }
 
+    // if they chose a new chart name, create the records
     if (saveData && !saveCompleted) {
 
+        // prepare the records for inserting
         for (var j = 0; j < records.length; j++) {
             if (records[j] != "" && records[j] != null) {
                 recordsToUpdate.push({fields: {
@@ -775,22 +819,27 @@ function SaveSeatingChartData(props) {
             }
         }
 
-
-        //createChartRecords(dataTable, recordsToUpdate);
+        // create the records
+        createChartRecords(dataTable, recordsToUpdate);
         setSaveCompleted(true);
     }
 
     const [showHomeScreen, setHomeScreen] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+    // show the home screen
     if (showHomeScreen) {
         return <SeatingChartBlock />
+
+    // show the settings screen, if any of the data needed is empty
     } else if (dataTableId == null || guestNameFieldId == null || chartNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null) {
         return <div>
 
             <SettingsComponent message="Before proceeding to save data, you must fill out information in the appropriate section. You can open or close Settings at any time using the button on the top right of your screen." />
 
             </div>;
+
+    // if the seating chart records have been created, show a completed screen
     } else if (saveData && !chartNameWillBeOverwritten && saveCompleted) {
         return <Box
                     position="absolute"
@@ -820,6 +869,8 @@ function SaveSeatingChartData(props) {
             <Button onClick={(e) => setHomeScreen(true)} variant="primary" icon="chevronLeft" aria-label="Back to Home Screen">Back to Home Screen</Button>
             </Box>
         </Box>;
+
+    // show the save data screen
     } else {
         return <Box
                     position="absolute"
@@ -872,15 +923,19 @@ function SaveSeatingChartData(props) {
     }
 }
 
+// create the chart records asynchronously
 async function createChartRecords(dataTable, recordsToUpdate) {
 
     const batchSize = 50;
     var secondNum;
 
+    // if there are less than 50 records, update them
     if (recordsToUpdate.length < 50) {
         dataTable.createRecordsAsync(recordsToUpdate);
     } else {
         var i = 0;
+
+        // otherwise, split the records into batches of 50 records to update
         while (i < recordsToUpdate.length) {
             secondNum = i + batchSize;
             const updateBatch = recordsToUpdate.slice(i, secondNum);
