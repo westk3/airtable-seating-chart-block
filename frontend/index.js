@@ -29,6 +29,10 @@ import React, {useState, useEffect} from 'react';
 // Seating Chart block initial screen
 function SeatingChartBlock() {
 
+    const base = useBase();
+
+    const globalConfig = useGlobalConfig();
+
     const [isShowingSettings, setIsShowingSettings] = useState(false);
 
     useSettingsButton(function() {
@@ -38,9 +42,23 @@ function SeatingChartBlock() {
     const [showNewChart, setShowNewChart] = useState(false);
     const [loadExistingChart, setLoadExistingChart] = useState(false);
 
-    const base = useBase();
+    var backToHome = globalConfig.get("backToHome");
 
-    const globalConfig = useGlobalConfig();
+    const [renderBackScreen, setRenderBackScreen] = useState(false);
+
+    if (backToHome && !renderBackScreen) {
+        setShowNewChart(false);
+        setLoadExistingChart(false);
+        setRenderBackScreen(true);
+    }
+
+    useEffect(() => {
+        if (renderBackScreen && backToHome) {
+            globalConfig.setAsync("backToHome", false);
+            setRenderBackScreen(false);
+        }
+
+    });
 
     const dataTableId = globalConfig.get('dataTableId');
     const dataTable = base.getTableByIdIfExists(dataTableId);
@@ -61,9 +79,16 @@ function SeatingChartBlock() {
     // show settings
     if (isShowingSettings || (dataTable == null || chartNameFieldId == null || guestNameFieldId == null || tableNumFieldId == null || chairNumFieldId == null || guestTable == null || relationshipFieldId == null || originalGuestNameFieldId == null)) {
         return <SettingsComponent message="Welcome to the Seating Chart Block. Please fill out these initial settings before using the block. Settings must first be initialized by a user with Editor permissions. You can return to these settings at any time by pressing the settings button in the top right corner." />;
+    // show new seating chart screen
+    } else if (showNewChart && !loadExistingChart) {
+        return <NewSeatingChart />;
+
+    // show load existing seating chart screen
+    } else if (loadExistingChart && !showNewChart) {
+        return <LoadExistingSeatingChart />;
 
     // show choices to create a new seating chart or load an existing seating chart
-    } else if (!showNewChart && !loadExistingChart) {
+    } else {
         return <Box
                     position="absolute"
                     top={0}
@@ -114,24 +139,11 @@ function SeatingChartBlock() {
 
                     </Box>
                 </Box>;
-
-    // show new seating chart screen
-    } else if (showNewChart && !loadExistingChart) {
-        return <NewSeatingChart />;
-
-    // show load existing seating chart screen
-    } else if (loadExistingChart && !showNewChart) {
-        return <LoadExistingSeatingChart />;
-
-    // error page
-    } else {
-        return <div>ERROR, try refreshing the page.</div>;
     }
 }
 
 // settings component
 function SettingsComponent(props) {
-
     var message = props.message;
 
     const base = useBase();
@@ -223,7 +235,6 @@ function SettingsComponent(props) {
 }
 
 // new seating chart component
-
 function NewSeatingChart() {
 
     const [isShowingSettings, setIsShowingSettings] = useState(false);
@@ -299,6 +310,11 @@ function NewSeatingChart() {
             setChartGenerated(true);
             setGenerateChart(false);
         }
+
+        if (showHomeScreen) {
+            globalConfig.setAsync("backToHome", true);
+        }
+
     });
 
     if (chartGenerated) {
@@ -314,6 +330,7 @@ function NewSeatingChart() {
 
     // return to the home screen
     if (showHomeScreen) {
+
         return <SeatingChartBlock />;
 
     // show settings, if any data is missing
@@ -393,7 +410,6 @@ function NewSeatingChart() {
 }
 
 // load existing seating chart component
-
 function LoadExistingSeatingChart() {
 
     const [isShowingSettings, setIsShowingSettings] = useState(false);
@@ -503,6 +519,12 @@ function LoadExistingSeatingChart() {
 
     const [showHomeScreen, setHomeScreen] = useState(false);
 
+    useEffect(() => {
+        if (showHomeScreen) {
+            globalConfig.setAsync("backToHome", true);
+        }
+    });
+
     // show home screen
     if (showHomeScreen) {
         return <SeatingChartBlock />
@@ -559,7 +581,6 @@ function LoadExistingSeatingChart() {
 }
 
 // Seating chart automatic creation function
-
 function seatingAutomation(records, numTables, numChairs, relationshipFieldId) {
 
     var maxTimes = 50;
@@ -714,7 +735,6 @@ function countHappiness(tableRecords, relationshipFieldId) {
 }
 
 // Render the seating chart
-
 function renderSeatingChart(guestNameArray, numTables, numChairs) {
 
     if (guestNameArray.length == numTables * numChairs) {
@@ -760,7 +780,6 @@ function renderSeatingChart(guestNameArray, numTables, numChairs) {
 }
 
 // Save seating chart data to file
-
 function SaveSeatingChartData(props) {
     const [isShowingSettings, setIsShowingSettings] = useState(false);
 
