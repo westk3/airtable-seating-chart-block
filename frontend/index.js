@@ -1,11 +1,10 @@
-//test errors for all screens
-//test render chart with bad values
 //check save with 50+ records, loading table with 50+ records
-//when change table problems happen (clear globalconfig?)
 //test seating automation with more people
 //loading icons?
 
 //add comments
+
+//save chart not working in production
 
 import {
     initializeBlock,
